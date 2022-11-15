@@ -37,6 +37,7 @@ OPTION( checkconstraint,   1,  0,  1,0,0,0, "check constraint satisfied") \
 OPTION( checkfailed,       1,  0,  1,0,0,0, "check failed literals form core") \
 OPTION( checkfrozen,       0,  0,  1,0,0,0, "check all frozen semantics") \
 OPTION( checkproof,        1,  0,  1,0,0,0, "check proof internally") \
+OPTION( checkprooflrat,    1,  0,  1,0,0,0, "use internal LRAT proof checker") \
 OPTION( checkwitness,      1,  0,  1,0,0,0, "check witness internally") \
 OPTION( chrono,            1,  0,  2,0,0,1, "chronological backtracking") \
 OPTION( chronoalways,      0,  0,  1,0,0,1, "force always chronological") \
