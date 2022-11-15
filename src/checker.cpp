@@ -59,15 +59,15 @@ CheckerClause * Checker::new_clause () {
   //
   for (unsigned i = 0; i < 2; i++) {
     int lit = literals[i];
-    if (!val (lit)) continue;
+    if (val (lit) >= 0) continue;
     for (unsigned j = i + 1; j < size; j++) {
       int other = literals[j];
-      if (val (other)) continue;
+      if (val (other) < 0) continue;
       swap (literals[i], literals[j]);
       break;
     }
   }
-  assert (!val (literals [0]));
+  assert (!val (literals [0]));    // can't assert ! here either :/
   assert (!val (literals [1]));
   watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
   watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
@@ -345,7 +345,7 @@ void Checker::insert () {
 /*------------------------------------------------------------------------*/
 
 inline void Checker::assign (int lit) {
-  assert (!val (lit));
+  assert (!val (lit));   // cannot guarantee (!val (lit)) anymore :/ -> yes we can!
   vals[lit] = 1;
   vals[-lit] = -1;
   trail.push_back (lit);
@@ -485,6 +485,7 @@ vector<int64_t> Checker::build_lrat_proof () {
     justified [l2a (lit)] = true;
     counter--;
     int64_t reason_id = unit_reasons[l2a (lit)];
+    LOG ("CHECKER lit %d unit_reason?: %ld", lit, reason_id);
     if (reason_id) {
       proof_chain.push_back (reason_id);
       continue;
@@ -503,10 +504,6 @@ vector<int64_t> Checker::build_lrat_proof () {
   LOG ("CHECKER counter %d", counter);
   assert (!counter);
   return proof_chain;
-  // There is a bug where a lit can have a deleted clause as reason if it was
-  // subsumed for example.
-  // When we go beyond the added clause in conflict analysis for the proof_chain
-  // this can be triggered.
 }
 
 bool Checker::check_lrat_proof (vector<int64_t> proof_chain) {
@@ -518,7 +515,13 @@ bool Checker::check () {
   if (inconsistent) return true;
   unsigned previously_propagated = next_to_propagate;
   for (const auto & lit : simplified)
+  {
+    /* if (val (lit) > 0) {
+      backtrack (previously_propagated);
+      return true;
+    } */                        // depricated bugfix
     assume (-lit);
+  }
   bool res = !propagate ();
   if (res && internal->opts.checkprooflrat) {          // not sure if I want to build
     vector<int64_t> proof_chain = build_lrat_proof (); // the proof if check already
@@ -539,7 +542,8 @@ void Checker::add_clause (const char * type) {
   for (const auto & lit : simplified) {
     const signed char tmp = val (lit);
     if (tmp < 0) continue;
-    assert (!tmp);
+    if (tmp > 0)
+      LOG ("CHECKER add clause with satisfied literal %d", lit);
     if (unit) { unit = INT_MIN; break; }
     unit = lit;
   }
@@ -572,8 +576,12 @@ void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   stats.original++;
   import_clause (c);
   last_id = id;
-  if (tautological ())
+  assert (id);
+  if (tautological ()) {
     LOG ("CHECKER ignoring satisfied original clause");
+    if (simplified.size () == 1)
+      unit_reasons[l2a (simplified[0])] = id;
+  }
   else add_clause ("original");
   simplified.clear ();
   unsimplified.clear ();
@@ -588,8 +596,12 @@ void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
   stats.derived++;
   import_clause (c);
   last_id = id;
-  if (tautological ())
+  assert (id);
+  if (tautological ()) {
+    if (simplified.size () == 1)
+      unit_reasons[l2a (simplified[0])] = id;
     LOG ("CHECKER ignoring satisfied derived clause");
+  }
   else if (!check ()) {
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
