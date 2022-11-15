@@ -172,7 +172,7 @@ Checker::Checker (Internal * i)
   size_vars (0), vals (0),
   inconsistent (false), num_clauses (0), num_garbage (0),
   size_clauses (0), clauses (0), garbage (0),
-  next_to_propagate (0), last_hash (0)
+  next_to_propagate (0), last_hash (0), last_id (0)
 {
   LOG ("CHECKER new");
 
@@ -229,6 +229,15 @@ void Checker::enlarge_vars (int64_t idx) {
   
   unit_reasons.resize (new_size_vars);
   reasons.resize (new_size_vars);
+  justified.resize (new_size_vars);
+  todo_justify.resize (new_size_vars);
+  for (int64_t i = size_vars; i < new_size_vars; i++)
+  {
+    unit_reasons[i] = 0;
+    reasons[i] = 0;
+    justified[i] = 0;
+    todo_justify[i] = 0;
+  }
   
   watchers.resize (2*new_size_vars);
   marks.resize (2*new_size_vars);
@@ -401,8 +410,12 @@ bool Checker::propagate () {
       if (blit_val > 0) continue;
       const unsigned size = w.size;
       if (size == 2) {                          // not precise since
-        if (blit_val < 0) res = false;          // clause might be garbage
-        else assign (w.blit);                   // but still sound
+        if (!w.clause->size) continue;
+        if (blit_val < 0) {
+          res = false;                          // clause might be garbage
+          conflict = w.clause;
+        }
+        else assign_reason (w.blit, w.clause);  // but still sound
       } else {
         assert (size > 2);
         CheckerClause * c = w.clause;
@@ -424,8 +437,11 @@ bool Checker::propagate () {
           watcher (replacement).push_back (CheckerWatch (-lit, c));
           swap (lits[1], lits[k]);
           j--;
-        } else if (!other_val) assign (other);
-        else res = false;
+        } else if (!other_val) assign_reason (other, c);
+        else {
+          res = false;
+          conflict = c;
+        }
       }
     }
     while (i != end) *j++ = *i++;
@@ -434,13 +450,67 @@ bool Checker::propagate () {
   return res;
 }
 
-void Checker::build_lrat_proof () {
-  
-  return;
+vector<int64_t> Checker::build_lrat_proof () {
+  LOG ("CHECKER build lrat proof");
+
+  vector<int64_t> proof_chain;
+  for (auto b : justified) b = false;
+  for (auto b : todo_justify) b = false;
+  for (const auto & lit : simplified) {
+    LOG ("CHECKER learned lit %d", lit);
+    justified[l2a (lit)] = true;
+    todo_justify[l2a (lit)] = true;    
+  }
+  LOG ("CHECKER init todo_justify");
+  assert (conflict);
+  int counter = 0;
+  for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++)
+  {
+    int lit = *i;
+    LOG ("CHECKER conflict lit %d", lit);
+    if (!todo_justify[l2a (lit)]) {
+      todo_justify[l2a (lit)] = true;
+      counter++;
+    }
+  }
+  proof_chain.push_back (conflict->id);
+  LOG ("CHECKER go over trail");
+  for (auto i = trail.end () - 1; i >= trail.begin (); i--) {
+    assert (i != trail.end ());
+    int lit = *i;
+    LOG ("CHECKER check lit on trail: %d, counter: %d", lit, counter);
+    if (counter == 0) break;
+    if (justified [l2a (lit)]) { counter--; continue; }
+    if (!todo_justify [l2a (lit)]) continue;
+    justified [l2a (lit)] = true;
+    counter--;
+    int64_t reason_id = unit_reasons[l2a (lit)];
+    if (reason_id) {
+      proof_chain.push_back (reason_id);
+      continue;
+    }
+    CheckerClause * reason_clause = reasons[l2a (lit)];
+    assert (reason_clause);
+    assert (reason_clause->size);
+    LOG ("CHECKER mark lits from clause of size: %d", reason_clause->size);
+    for (int * i = reason_clause->literals; i < reason_clause->literals + reason_clause->size; i++) {
+      if (!todo_justify[l2a (*i)] && !justified[l2a (*i)]) {
+        counter++;
+        todo_justify[l2a (*i)] = true;
+      }
+    }
+  }
+  LOG ("CHECKER counter %d", counter);
+  assert (!counter);
+  return proof_chain;
+  // There is a bug where a lit can have a deleted clause as reason if it was
+  // subsumed for example.
+  // When we go beyond the added clause in conflict analysis for the proof_chain
+  // this can be triggered.
 }
 
-bool Checker::check_lrat_proof () {
-  return true;
+bool Checker::check_lrat_proof (vector<int64_t> proof_chain) {
+  return proof_chain.size ();
 }
 
 bool Checker::check () {
@@ -450,9 +520,9 @@ bool Checker::check () {
   for (const auto & lit : simplified)
     assume (-lit);
   bool res = !propagate ();
-  if (res && internal->opts.checkprooflrat) {  // not sure if I want to build
-    build_lrat_proof ();                      // the proof if check already
-    res = check_lrat_proof ();                // failed.
+  if (res && internal->opts.checkprooflrat) {          // not sure if I want to build
+    vector<int64_t> proof_chain = build_lrat_proof (); // the proof if check already
+    res = check_lrat_proof (proof_chain);              // failed.
   }
   backtrack (previously_propagated);
   return res;
@@ -487,6 +557,8 @@ void Checker::add_clause (const char * type) {
     stats.units++;
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
+      vector<int64_t> proof_chain = build_lrat_proof ();
+      assert (check_lrat_proof (proof_chain));
       inconsistent = true;
     }
   } else insert ();

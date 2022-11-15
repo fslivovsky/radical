@@ -76,8 +76,11 @@ class Checker : public Observer {
 
   // access by abs(lit)
   static unsigned l2a (int lit);
-  vector<CheckerClause *> reasons;       // store reason for each assignment
+  vector<CheckerClause *> reasons;     // store reason for each assignment
   vector<int64_t> unit_reasons;        // if reason was unit store here instead
+  vector<bool> justified;              // probably better as array ??
+  vector<bool> todo_justify;
+  CheckerClause * conflict;
 
   
   bool inconsistent;            // found or added empty clause
@@ -133,8 +136,8 @@ class Checker : public Observer {
   bool propagate ();            // propagate and check for conflicts
   void backtrack (unsigned);    // prepare for next clause
   bool check ();                // check simplified clause is implied
-  void build_lrat_proof ();
-  bool check_lrat_proof ();
+  vector<int64_t> build_lrat_proof ();
+  bool check_lrat_proof (vector<int64_t>);
 
   struct {
 
