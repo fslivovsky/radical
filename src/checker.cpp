@@ -412,6 +412,14 @@ bool Checker::propagate () {
   return res;
 }
 
+void Checker::build_lrat_proof () {
+  return;
+}
+
+bool Checker::check_lrat_proof () {
+  return true;
+}
+
 bool Checker::check () {
   stats.checks++;
   if (inconsistent) return true;
@@ -419,6 +427,10 @@ bool Checker::check () {
   for (const auto & lit : simplified)
     assume (-lit);
   bool res = !propagate ();
+  if (res && internal->opts.checkprooflrat) {  // not sure if I want to build
+    build_lrat_proof ();                      // the proof if check already
+    res = check_lrat_proof ();                // failed.
+  }
   backtrack (previously_propagated);
   return res;
 }

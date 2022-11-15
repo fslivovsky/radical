@@ -11,7 +11,7 @@ namespace CaDiCaL {
 
 // This checker implements an online forward DRUP proof checker enabled by
 // 'opts.checkproof' (requires 'opts.check' also to be enabled).  This is
-// useful for model basted testing (and delta-debugging), where we can not
+// useful for model based testing (and delta-debugging), where we can not
 // rely on an external proof checker such as 'drat-trim'.  We also do not
 // have yet  a flow for offline incremental proof checking, while this
 // checker here can also be used in an incremental setting.
@@ -122,6 +122,8 @@ class Checker : public Observer {
   bool propagate ();            // propagate and check for conflicts
   void backtrack (unsigned);    // prepare for next clause
   bool check ();                // check simplified clause is implied
+  void build_lrat_proof ();
+  bool check_lrat_proof ();
 
   struct {
 
