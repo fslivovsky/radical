@@ -156,6 +156,7 @@ struct Internal {
   Reluctant reluctant;          // restart counter in stable mode
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // internal maximum variable index
+  int64_t clause_id;            // last used id for clauses
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
