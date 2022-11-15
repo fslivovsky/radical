@@ -3,3 +3,6 @@
 CaDiCaL Simplified Satisfiability Solver
 ===============================================================================
 Reimplement FRAT proofs
+inspired by:
+https://github.com/digama0/cadical
+https://www.cs.cmu.edu/~mheule/publications/FRAT-TACAS.pdf
