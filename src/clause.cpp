@@ -87,7 +87,7 @@ Clause * Internal::new_clause (bool red, int glue) {
   Clause * c = (Clause *) new char[bytes];
 
   stats.added.total++;
-  c->id = clause_id++;
+  c->id = ++clause_id;
 
   c->conditioned = false;
   c->covered = false;

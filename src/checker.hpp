@@ -30,6 +30,7 @@ namespace CaDiCaL {
 struct CheckerClause {
   CheckerClause * next;         // collision chain link for hash table
   uint64_t hash;                // previously computed full 64-bit hash
+  int64_t id;                   // id of clause
   unsigned size;                // zero if this is a garbage clause
   int literals[2];              // otherwise 'literals' of length 'size'
 };
@@ -61,6 +62,7 @@ class Checker : public Observer {
   // is actually valid in the range [-size_vars+1, ..., size_vars-1].
   //
   signed char * vals;
+  
 
   // The 'watchers' and 'marks' data structures are not that time critical
   // and thus we access them by first mapping a literal to 'unsigned'.
@@ -72,6 +74,12 @@ class Checker : public Observer {
   signed char & mark (int lit);
   CheckerWatcher & watcher (int lit);
 
+  // access by abs(lit)
+  static unsigned l2a (int lit);
+  vector<CheckerClause *> reasons;       // store reason for each assignment
+  vector<int64_t> unit_reasons;        // if reason was unit store here instead
+
+  
   bool inconsistent;            // found or added empty clause
 
   uint64_t num_clauses;         // number of clauses in hash table
@@ -96,6 +104,7 @@ class Checker : public Observer {
 
   uint64_t nonces[num_nonces];  // random numbers for hashing
   uint64_t last_hash;           // last computed hash value of clause
+  int64_t last_id;              // id of the last added clause
   uint64_t compute_hash ();     // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
@@ -118,6 +127,8 @@ class Checker : public Observer {
   bool clause_satisfied (CheckerClause*);
 
   void assign (int lit);        // assign a literal to true
+  void assign_unit_reason (int lit, int64_t id);
+  void assign_reason (int lit, CheckerClause * reason_clause); 
   void assume (int lit);        // assume a literal
   bool propagate ();            // propagate and check for conflicts
   void backtrack (unsigned);    // prepare for next clause
@@ -154,8 +165,8 @@ public:
 
   // The following three implement the 'Observer' interface.
   //
-  void add_original_clause (const vector<int> &);
-  void add_derived_clause (const vector<int> &);
+  void add_original_clause (int64_t, const vector<int> &);
+  void add_derived_clause (int64_t, const vector<int> &);
   void delete_clause (const vector<int> &);
 
   void print_stats ();

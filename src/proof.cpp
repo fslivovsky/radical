@@ -77,12 +77,14 @@ inline void Proof::add_literals (const vector<int> & c) {
 void Proof::add_original_clause (const vector<int> & c) {
   LOG (c, "PROOF adding original internal clause");
   add_literals (c);
+  clause_id = ++internal->clause_id;
   add_original_clause ();
 }
 
 void Proof::add_derived_empty_clause () {
   LOG ("PROOF adding empty clause");
   assert (clause.empty ());
+  clause_id = ++internal->clause_id;
   add_derived_clause ();
 }
 
@@ -90,6 +92,7 @@ void Proof::add_derived_unit_clause (int internal_unit) {
   LOG ("PROOF adding unit clause %d", internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
+  clause_id = ++internal->clause_id;
   add_derived_clause ();
 }
 
@@ -99,6 +102,7 @@ void Proof::add_derived_clause (Clause * c) {
   LOG (c, "PROOF adding to proof derived");
   assert (clause.empty ());
   add_literals (c);
+  clause_id = c->id;
   add_derived_clause ();
 }
 
@@ -121,6 +125,7 @@ void Proof::add_derived_clause (const vector<int> & c) {
   assert (clause.empty ());
   for (const auto & lit : c)
     add_literal (lit);
+  clause_id = ++internal->clause_id;
   add_derived_clause ();
 }
 
@@ -138,6 +143,7 @@ void Proof::flush_clause (Clause * c) {
     if (internal->fixed (internal_lit) < 0) continue;
     add_literal (internal_lit);
   }
+  clause_id = ++internal->clause_id;
   add_derived_clause ();
   delete_clause (c);
 }
@@ -156,6 +162,7 @@ void Proof::strengthen_clause (Clause * c, int remove) {
     if (internal_lit == remove) continue;
     add_literal (internal_lit);
   }
+  clause_id = ++internal->clause_id;
   add_derived_clause ();
   delete_clause (c);
 }
@@ -164,20 +171,23 @@ void Proof::strengthen_clause (Clause * c, int remove) {
 
 void Proof::add_original_clause () {
   LOG (clause, "PROOF adding original external clause");
+  assert (clause_id);
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_original_clause (clause);
+    observers[i]->add_original_clause (clause_id, clause);
   clause.clear ();
 }
 
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
+  assert (clause_id);
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_derived_clause (clause);
+    observers[i]->add_derived_clause (clause_id, clause);
   clause.clear ();
 }
 
 void Proof::delete_clause () {
   LOG (clause, "PROOF deleting external clause");
+  assert (clause_id);
   for (size_t i = 0; i < observers.size (); i++)
     observers[i]->delete_clause (clause);
   clause.clear ();

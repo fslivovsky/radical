@@ -12,6 +12,13 @@ inline unsigned Checker::l2u (int lit) {
    return res;
 }
 
+inline unsigned Checker::l2a (int lit) {
+   assert (lit);
+   assert (lit != INT_MIN);
+   unsigned res = abs (lit);
+   return res;
+}
+
 inline signed char Checker::val (int lit) {
   assert (lit);
   assert (lit != INT_MIN);
@@ -41,6 +48,7 @@ CheckerClause * Checker::new_clause () {
   CheckerClause * res = (CheckerClause *) new char [bytes];
   res->next = 0;
   res->hash = last_hash;
+  res->id = last_id;
   res->size = size;
   int * literals = res->literals, * p = literals;
   for (const auto & lit : simplified)
@@ -218,7 +226,10 @@ void Checker::enlarge_vars (int64_t idx) {
   vals -= size_vars;
   delete [] vals;
   vals = new_vals;
-
+  
+  unit_reasons.resize (new_size_vars);
+  reasons.resize (new_size_vars);
+  
   watchers.resize (2*new_size_vars);
   marks.resize (2*new_size_vars);
 
@@ -339,6 +350,17 @@ inline void Checker::assume (int lit) {
   assign (lit);
 }
 
+inline void Checker::assign_unit_reason (int lit, int64_t id) {
+  unit_reasons[l2a (lit)] = id;
+  assign (lit);
+}
+
+inline void Checker::assign_reason (int lit, CheckerClause * reason_clause) {
+  reasons[l2a (lit)] = reason_clause;
+  assign (lit);
+}
+
+
 void Checker::backtrack (unsigned previously_propagated) {
 
   assert (previously_propagated <= trail.size ());
@@ -413,6 +435,7 @@ bool Checker::propagate () {
 }
 
 void Checker::build_lrat_proof () {
+  
   return;
 }
 
@@ -451,6 +474,7 @@ void Checker::add_clause (const char * type) {
     unit = lit;
   }
 
+  // TODO: build LRAT proof in all these cases
   if (simplified.empty ()) {
     LOG ("CHECKER added empty %s clause", type);
     inconsistent = true;
@@ -459,7 +483,7 @@ void Checker::add_clause (const char * type) {
     inconsistent = true;
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
-    assign (unit);
+    assign_unit_reason (unit, last_id);
     stats.units++;
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
@@ -468,13 +492,14 @@ void Checker::add_clause (const char * type) {
   } else insert ();
 }
 
-void Checker::add_original_clause (const vector<int> & c) {
+void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of original clause");
   stats.added++;
   stats.original++;
   import_clause (c);
+  last_id = id;
   if (tautological ())
     LOG ("CHECKER ignoring satisfied original clause");
   else add_clause ("original");
@@ -483,13 +508,14 @@ void Checker::add_original_clause (const vector<int> & c) {
   STOP (checking);
 }
 
-void Checker::add_derived_clause (const vector<int> & c) {
+void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");
   stats.added++;
   stats.derived++;
   import_clause (c);
+  last_id = id;
   if (tautological ())
     LOG ("CHECKER ignoring satisfied derived clause");
   else if (!check ()) {

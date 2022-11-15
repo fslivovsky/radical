@@ -15,11 +15,11 @@ public:
   // An online proof 'Checker' needs to know original clauses too while a
   // proof 'Tracer' will not implement this function.
   //
-  virtual void add_original_clause (const vector<int> &) { }
+  virtual void add_original_clause (int64_t, const vector<int> &) { }
 
   // Notify the observer that a new clause has been derived.
   //
-  virtual void add_derived_clause (const vector<int> &) { }
+  virtual void add_derived_clause (int64_t, const vector<int> &) { }
 
   // Notify the observer that a clause is not used anymore.
   //

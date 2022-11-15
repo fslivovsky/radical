@@ -19,6 +19,7 @@ class Proof {
   Internal * internal;
 
   vector<int> clause;           // of external literals
+  int64_t clause_id;            // id of added clause
   vector<Observer *> observers; // owned, so deleted in destructor
 
   void add_literal (int internal_lit);  // add to 'clause'
