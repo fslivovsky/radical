@@ -311,7 +311,7 @@ void Internal::assign_original_unit (int lit) {
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
 //
-void Internal::add_new_original_clause () {
+void Internal::add_new_original_clause (int64_t id) {
   if (level) backtrack ();
   LOG (original, "original clause");
   bool skip = false;
@@ -345,8 +345,9 @@ void Internal::add_new_original_clause () {
       unmark (lit);
   }
   if (skip) {
-    if (proof) proof->delete_clause (original);
+    if (proof) proof->delete_clause (id, original);
   } else {
+    int64_t new_id = id;
     size_t size = clause.size ();
     if (!size) {
       if (!unsat) {
@@ -356,15 +357,23 @@ void Internal::add_new_original_clause () {
       }
     } else if (size == 1) {
       assign_original_unit (clause[0]);
+      if (original.size () > size)
+        new_id = ++clause_id;
     } else {
       Clause * c = new_clause (false);
+      if (original.size () == size)
+      {
+        c->id = id;
+        clause_id--;
+      }
+      new_id = c->id;
       watch_clause (c);
     }
     if (original.size () > size) {
       external->check_learned_clause ();
       if (proof) {
-        proof->add_derived_clause (clause);
-        proof->delete_clause (original);
+        proof->add_derived_clause (new_id, clause);
+        proof->delete_clause (id, original);
       }
     }
   }

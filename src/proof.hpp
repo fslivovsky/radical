@@ -47,9 +47,9 @@ public:
   void add_derived_empty_clause ();
   void add_derived_unit_clause (int unit);
   void add_derived_clause (Clause *);
-  void add_derived_clause (const vector<int> &);
+  void add_derived_clause (int64_t, const vector<int> &);
 
-  void delete_clause (const vector<int> &);
+  void delete_clause (int64_t, const vector<int> &);
   void delete_clause (Clause *);
 
   // These two actually pretend to add and remove a clause.

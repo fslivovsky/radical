@@ -177,7 +177,7 @@ void Internal::add_original_lit (int lit) {
     original.push_back (lit);
   } else {
     if (proof) proof->add_original_clause (original);
-    add_new_original_clause ();
+    add_new_original_clause (clause_id);
     original.clear ();
   }
 }

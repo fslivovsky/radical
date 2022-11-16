@@ -274,8 +274,9 @@ bool Internal::decompose_round () {
       assert (c->size > 2);
       if (!c->redundant) mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (clause);
+        proof->add_derived_clause (++clause_id, clause);
         proof->delete_clause (c);
+        c->id = clause_id;
       }
       size_t l;
       for (l = 2; l < clause.size (); l++)

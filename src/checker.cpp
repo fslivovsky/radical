@@ -59,10 +59,10 @@ CheckerClause * Checker::new_clause () {
   //
   for (unsigned i = 0; i < 2; i++) {
     int lit = literals[i];
-    if (val (lit) >= 0) continue;
+    if (!val (lit)) continue;
     for (unsigned j = i + 1; j < size; j++) {
       int other = literals[j];
-      if (val (other) < 0) continue;
+      if (val (other)) continue;
       swap (literals[i], literals[j]);
       break;
     }
@@ -302,6 +302,8 @@ uint64_t Checker::reduce_hash (uint64_t hash, uint64_t size) {
 }
 
 uint64_t Checker::compute_hash () {
+  return last_hash = (uint64_t) last_id;
+  /*
   unsigned i = 0, j = 0;
   uint64_t tmp = 0;
   for (i = 0; i < simplified.size (); i++) {
@@ -310,6 +312,7 @@ uint64_t Checker::compute_hash () {
     if (j == num_nonces) j = 0;
   }
   return last_hash = tmp;
+  */
 }
 
 CheckerClause ** Checker::find () {
@@ -572,6 +575,7 @@ void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of original clause");
+  LOG ("CHECKER clause id %ld", id);
   stats.added++;
   stats.original++;
   import_clause (c);
@@ -592,6 +596,7 @@ void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");
+  LOG ("CHECKER clause id %ld", id);
   stats.added++;
   stats.derived++;
   import_clause (c);
@@ -617,12 +622,14 @@ void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
 
 /*------------------------------------------------------------------------*/
 
-void Checker::delete_clause (const vector<int> & c) {
+void Checker::delete_clause (int64_t id, const vector<int> & c) {
   if (inconsistent) return;
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");
+  LOG ("CHECKER clause id %ld", id);
   stats.deleted++;
   import_clause (c);
+  last_id = id;
   if (!tautological ()) {
     CheckerClause ** p = find (), * d = *p;
     if (d) {

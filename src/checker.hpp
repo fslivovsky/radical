@@ -170,7 +170,7 @@ public:
   //
   void add_original_clause (int64_t, const vector<int> &);
   void add_derived_clause (int64_t, const vector<int> &);
-  void delete_clause (const vector<int> &);
+  void delete_clause (int64_t, const vector<int> &);
 
   void print_stats ();
   void dump ();                 // for debugging purposes only

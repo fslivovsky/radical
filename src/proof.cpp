@@ -110,22 +110,24 @@ void Proof::delete_clause (Clause * c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
   add_literals (c);
+  clause_id = c->id;
   delete_clause ();
 }
 
-void Proof::delete_clause (const vector<int> & c) {
+void Proof::delete_clause (int64_t id, const vector<int> & c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
   add_literals (c);
+  clause_id = id;
   delete_clause ();
 }
 
-void Proof::add_derived_clause (const vector<int> & c) {
+void Proof::add_derived_clause (int64_t id, const vector<int> & c) {
   LOG (internal->clause, "PROOF adding derived clause");
   assert (clause.empty ());
   for (const auto & lit : c)
     add_literal (lit);
-  clause_id = ++internal->clause_id;
+  clause_id = id;
   add_derived_clause ();
 }
 
@@ -143,9 +145,11 @@ void Proof::flush_clause (Clause * c) {
     if (internal->fixed (internal_lit) < 0) continue;
     add_literal (internal_lit);
   }
-  clause_id = ++internal->clause_id;
+  int64_t id = ++internal->clause_id;
+  clause_id = id;
   add_derived_clause ();
   delete_clause (c);
+  c->id = id;
 }
 
 // While strengthening clauses, e.g., through self-subsuming resolutions,
@@ -162,9 +166,11 @@ void Proof::strengthen_clause (Clause * c, int remove) {
     if (internal_lit == remove) continue;
     add_literal (internal_lit);
   }
-  clause_id = ++internal->clause_id;
+  int64_t id = ++internal->clause_id;
+  clause_id = id;
   add_derived_clause ();
   delete_clause (c);
+  c->id = id;
 }
 
 /*------------------------------------------------------------------------*/
@@ -187,9 +193,8 @@ void Proof::add_derived_clause () {
 
 void Proof::delete_clause () {
   LOG (clause, "PROOF deleting external clause");
-  assert (clause_id);
   for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->delete_clause (clause);
+    observers[i]->delete_clause (clause_id, clause);
   clause.clear ();
 }
 
