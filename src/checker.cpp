@@ -33,6 +33,12 @@ signed char & Checker::mark (int lit) {
   return marks[u];
 }
 
+signed char & Checker::checked_lit (int lit) {
+  const unsigned u = l2u (lit);
+  assert (u < checked_lits.size ());
+  return checked_lits[u];
+}
+
 inline CheckerWatcher & Checker::watcher (int lit) {
   const unsigned u = l2u (lit);
   assert (u < watchers.size ());
@@ -241,7 +247,8 @@ void Checker::enlarge_vars (int64_t idx) {
   
   watchers.resize (2*new_size_vars);
   marks.resize (2*new_size_vars);
-
+  checked_lits.resize (2*new_size_vars);
+  
   assert (idx < new_size_vars);
   size_vars = new_size_vars;
 }
@@ -315,20 +322,22 @@ uint64_t Checker::compute_hash () {
   */
 }
 
-CheckerClause ** Checker::find () {
+CheckerClause ** Checker::find (const int64_t id) {
   stats.searches++;
   CheckerClause ** res, * c;
-  const uint64_t hash = compute_hash ();
-  const unsigned size = simplified.size ();
+  const uint64_t hash = last_hash = id;
   const uint64_t h = reduce_hash (hash, size_clauses);
   for (const auto & lit : simplified) mark (lit) = true;
   for (res = clauses + h; (c = *res); res = &c->next) {
-    if (c->hash == hash && c->size == size) {
+    if (c->hash == hash && c->id == id) {
+      break;
+      /*
       bool found = true;
       const int * literals = c->literals;
       for (unsigned i = 0; found && i != size; i++)
         found = mark (literals[i]);
       if (found) break;
+      */
     }
     stats.collisions++;
   }
@@ -477,6 +486,7 @@ vector<int64_t> Checker::build_lrat_proof () {
     }
   }
   proof_chain.push_back (conflict->id);
+  LOG ("CHECKER proof_chain size %ld", proof_chain.size ());
   LOG ("CHECKER go over trail");
   for (auto i = trail.end () - 1; i >= trail.begin (); i--) {
     assert (i != trail.end ());
@@ -497,6 +507,7 @@ vector<int64_t> Checker::build_lrat_proof () {
     assert (reason_clause);
     assert (reason_clause->size);
     LOG ("CHECKER mark lits from clause of size: %d", reason_clause->size);
+    proof_chain.push_back (reason_clause->id);
     for (int * i = reason_clause->literals; i < reason_clause->literals + reason_clause->size; i++) {
       if (!todo_justify[l2a (*i)] && !justified[l2a (*i)]) {
         counter++;
@@ -506,11 +517,41 @@ vector<int64_t> Checker::build_lrat_proof () {
   }
   LOG ("CHECKER counter %d", counter);
   assert (!counter);
+  LOG ("CHECKER proof_chain size %ld", proof_chain.size ());
   return proof_chain;
 }
 
 bool Checker::check_lrat_proof (vector<int64_t> proof_chain) {
-  return proof_chain.size ();
+  LOG ("CHECKER checking chain of size %ld", proof_chain.size ());
+  assert (proof_chain.size ());
+  for (auto & b : checked_lits) b = false;        // empty the vector
+  for (const auto & lit : simplified) {          // initialize -lit=true for
+    checked_lit (-lit) = true;                  // every lit in the learned clause
+  }
+  
+  for (auto p = proof_chain.end () - 1; p >= proof_chain.begin (); p--) {
+    int unit = 0;
+    CheckerClause * c = * find (*p);
+    for (int * i = c->literals; i < c->literals + c->size; i++) {
+      int lit = * i;
+      if (checked_lit (-lit)) continue;
+      assert (!checked_lit (lit)); 
+      if (unit) { unit = INT_MIN; break; }
+      unit = lit;
+    }
+    if (unit == INT_MIN) {
+      LOG ("CHECKER check failed, found non unit clause");
+      return false;
+    }
+    if (!unit) {
+      LOG ("CHECKER check succeded, clause empty");
+      assert (p == proof_chain.begin ());
+      break;
+    }
+    LOG ("CHECKER found unit clause, assign %d", unit);
+    checked_lit (unit) = true;
+  }
+  return true;
 }
 
 bool Checker::check () {
@@ -519,10 +560,6 @@ bool Checker::check () {
   unsigned previously_propagated = next_to_propagate;
   for (const auto & lit : simplified)
   {
-    /* if (val (lit) > 0) {
-      backtrack (previously_propagated);
-      return true;
-    } */                        // depricated bugfix
     assume (-lit);
   }
   bool res = !propagate ();
@@ -631,7 +668,7 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
   import_clause (c);
   last_id = id;
   if (!tautological ()) {
-    CheckerClause ** p = find (), * d = *p;
+    CheckerClause ** p = find (id), * d = *p;
     if (d) {
       assert (d->size > 1);
       // Remove from hash table, mark as garbage, connect to garbage list.

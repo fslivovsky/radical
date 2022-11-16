@@ -72,6 +72,7 @@ class Checker : public Observer {
   vector<signed char> marks;            // mark bits of literals
 
   signed char & mark (int lit);
+  signed char & checked_lit (int lit);
   CheckerWatcher & watcher (int lit);
 
   // access by abs(lit)
@@ -80,6 +81,7 @@ class Checker : public Observer {
   vector<int64_t> unit_reasons;        // if reason was unit store here instead
   vector<bool> justified;              // probably better as array ??
   vector<bool> todo_justify;
+  vector<signed char> checked_lits;
   CheckerClause * conflict;
 
   
@@ -116,7 +118,7 @@ class Checker : public Observer {
 
   void enlarge_clauses ();      // enlarge hash table for clauses
   void insert ();               // insert clause in hash table
-  CheckerClause ** find ();     // find clause position in hash table
+  CheckerClause ** find (const int64_t);  // find clause position in hash table
 
   void add_clause (const char * type);
 
