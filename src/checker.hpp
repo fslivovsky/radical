@@ -69,16 +69,15 @@ class Checker : public Observer {
   //
   static unsigned l2u (int lit);
   vector<CheckerWatcher> watchers;      // watchers of literals
-  vector<signed char> marks;            // mark bits of literals
+  // vector<signed char> marks;            // mark bits of literals
 
-  signed char & mark (int lit);
+  // signed char & mark (int lit);
   signed char & checked_lit (int lit);
   CheckerWatcher & watcher (int lit);
 
   // access by abs(lit)
   static unsigned l2a (int lit);
   vector<CheckerClause *> reasons;     // store reason for each assignment
-  vector<int64_t> unit_reasons;        // if reason was unit store here instead
   vector<bool> justified;              // probably better as array ??
   vector<bool> todo_justify;
   vector<signed char> checked_lits;
@@ -110,7 +109,7 @@ class Checker : public Observer {
   uint64_t nonces[num_nonces];  // random numbers for hashing
   uint64_t last_hash;           // last computed hash value of clause
   int64_t last_id;              // id of the last added clause
-  uint64_t compute_hash ();     // compute and save hash value of clause
+  uint64_t compute_hash (int64_t);     // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
@@ -125,6 +124,8 @@ class Checker : public Observer {
   void collect_garbage_clauses ();
 
   CheckerClause * new_clause ();
+  CheckerClause * new_unit_clause ();
+  CheckerClause * new_empty_clause ();
   void delete_clause (CheckerClause *);
 
   signed char val (int lit);            // returns '-1', '0' or '1'
@@ -132,8 +133,8 @@ class Checker : public Observer {
   bool clause_satisfied (CheckerClause*);
 
   void assign (int lit);        // assign a literal to true
-  void assign_unit_reason (int lit, int64_t id);
   void assign_reason (int lit, CheckerClause * reason_clause); 
+  void clear_reason (int lit); 
   void assume (int lit);        // assume a literal
   bool propagate ();            // propagate and check for conflicts
   void backtrack (unsigned);    // prepare for next clause

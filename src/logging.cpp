@@ -100,6 +100,22 @@ void Logger::log (Internal * internal,
   fflush (stdout);
 }
 
+void Logger::log (Internal * internal,
+                  const vector<int64_t> & c, const char *fmt, ...) {
+  print_log_prefix (internal);
+  tout.magenta ();
+  va_list ap;
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  for (const auto & lit : c)
+    printf (" %ld", lit);
+  fputc ('\n', stdout);
+  tout.normal ();
+  fflush (stdout);
+}
+
+
 // Now for 'restore_clause' to avoid copying (without logging).
 
 void Logger::log (Internal * internal,
@@ -127,6 +143,34 @@ void Logger::log (Internal * internal,
   tout.normal ();
   fflush (stdout);
 }
+
+
+void Logger::log (Internal * internal,
+                  const int * begin,
+                  const int * end,
+                  const char *fmt, ...) {
+  print_log_prefix (internal);
+  tout.magenta ();
+  va_list ap;
+  va_start (ap, fmt);
+  vprintf (fmt, ap);
+  va_end (ap);
+  if (internal->opts.logsort) {
+    vector<int> s;
+    for (auto p = begin; p != end; p++)
+      s.push_back (*p);
+    sort (s.begin (), s.end (), clause_lit_less_than ());
+    for (const auto & lit : s)
+      printf (" %d", lit);
+  } else {
+    for (auto p = begin; p != end; p++)
+      printf (" %d", *p);
+  }
+  fputc ('\n', stdout);
+  tout.normal ();
+  fflush (stdout);
+}
+
 
 }
 

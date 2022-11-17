@@ -42,11 +42,24 @@ static void log (Internal *, const Clause *, const char *fmt, ...)
 static void log (Internal *, const vector<int> &, const char *fmt, ...)
                  CADICAL_ATTRIBUTE_FORMAT (3, 4);
 
+// used for checking ids
+//
+static void log (Internal *, const vector<int64_t> &, const char *fmt, ...)
+                 CADICAL_ATTRIBUTE_FORMAT (3, 4);
+
 // Another variant, to avoid copying (without logging).
 //
 static void log (Internal *,
                  const vector<int>::const_iterator & begin,
                  const vector<int>::const_iterator & end,
+                 const char *fmt, ...)
+                 CADICAL_ATTRIBUTE_FORMAT (4, 5);
+
+// Another variant, to avoid copying (without logging).
+//
+static void log (Internal *,
+                 const int * begin,
+                 const int * end,
                  const char *fmt, ...)
                  CADICAL_ATTRIBUTE_FORMAT (4, 5);
 
