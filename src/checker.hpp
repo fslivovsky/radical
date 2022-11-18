@@ -69,9 +69,9 @@ class Checker : public Observer {
   //
   static unsigned l2u (int lit);
   vector<CheckerWatcher> watchers;      // watchers of literals
-  // vector<signed char> marks;            // mark bits of literals
+  vector<signed char> marks;            // mark bits of literals
 
-  // signed char & mark (int lit);
+  signed char & mark (int lit);
   signed char & checked_lit (int lit);
   CheckerWatcher & watcher (int lit);
 
@@ -85,6 +85,7 @@ class Checker : public Observer {
 
   
   bool inconsistent;            // found or added empty clause
+  const bool opt_lrat;
 
   uint64_t num_clauses;         // number of clauses in hash table
   uint64_t num_garbage;         // number of garbage clauses
@@ -116,7 +117,7 @@ class Checker : public Observer {
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
   void enlarge_clauses ();      // enlarge hash table for clauses
-  void insert ();               // insert clause in hash table
+  CheckerClause * insert ();               // insert clause in hash table
   CheckerClause ** find (const int64_t);  // find clause position in hash table
 
   void add_clause (const char * type);
@@ -134,13 +135,14 @@ class Checker : public Observer {
 
   void assign (int lit);        // assign a literal to true
   void assign_reason (int lit, CheckerClause * reason_clause); 
-  void clear_reason (int lit); 
+  void unassign_reason (int lit); 
   void assume (int lit);        // assume a literal
   bool propagate ();            // propagate and check for conflicts
   void backtrack (unsigned);    // prepare for next clause
   bool check ();                // check simplified clause is implied
-  vector<int64_t> build_lrat_proof ();
-  bool check_lrat_proof (vector<int64_t>);
+  bool check_lrat ();           // equivalent to check but uses
+  vector<int64_t> build_lrat_proof ();      // these two functions
+  bool check_lrat_proof (vector<int64_t>);  // instead of simple propagation
 
   struct {
 
