@@ -56,6 +56,7 @@ CheckerClause * Checker::new_empty_clause () {
   res->id = last_id;
   res->size = size;
   num_clauses++;
+  num_garbage++;
   return res;
 }
 
@@ -91,16 +92,18 @@ CheckerClause * Checker::new_clause () {
   //
   for (unsigned i = 0; i < 2; i++) {
     int lit = literals[i];
-    if (!val (lit)) continue;
+    if (val (lit) >= 0) continue;
     for (unsigned j = i + 1; j < size; j++) {
       int other = literals[j];
-      if (val (other)) continue;
+      if (val (other) < 0) continue;
       swap (literals[i], literals[j]);
       break;
     }
   }
-  assert (!val (literals [0]));
-  assert (!val (literals [1]));
+  // assert (val (literals [0]) >= 0);
+  // assert (val (literals [1]) >= 0);
+  // we cannot assert this here since we can add falsified clauses.
+  // so we have to check for these cases in propagate
   watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
   watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
 
@@ -158,18 +161,20 @@ void Checker::collect_garbage_clauses () {
 
   stats.collections++;
 
-  for (size_t i = 0; i < size_clauses; i++) {
-    CheckerClause ** p = clauses + i, * c;
-    while ((c = *p)) {
-      if (clause_satisfied (c)) {
-        c->size = 0;                    // mark as garbage
-        *p = c->next;
-        c->next = garbage;
-        garbage = c;
-        num_garbage++;
-        assert (num_clauses);
-        num_clauses--;
-      } else p = &c->next;
+  if (!opt_lrat) {
+    for (size_t i = 0; i < size_clauses; i++) {
+      CheckerClause ** p = clauses + i, * c;
+      while ((c = *p)) {
+        if (clause_satisfied (c)) {
+          c->size = 0;                    // mark as garbage
+          *p = c->next;
+          c->next = garbage;
+          garbage = c;
+          num_garbage++;
+          assert (num_clauses);
+          num_clauses--;
+        } else p = &c->next;
+      }
     }
   }
 
@@ -208,7 +213,7 @@ Checker::Checker (Internal * i)
   next_to_propagate (0), last_hash (0), last_id (0)
 {
   LOG ("CHECKER new");
-
+  assert (internal->opts.checkprooflrat == opt_lrat);
   // Initialize random number table for hash function.
   //
   Random random (42);
@@ -385,13 +390,13 @@ inline void Checker::assume (int lit) {
 }
 
 inline void Checker::assign_reason (int lit, CheckerClause * reason_clause) {
-  assert (!reasons[l2a (lit)]);
+  assert (!opt_lrat || !reasons[l2a (lit)]);
   reasons[l2a (lit)] = reason_clause;
   assign (lit);
 }
 
 inline void Checker::unassign_reason (int lit) {
-  assert (reasons[l2a (lit)]);
+  assert (!opt_lrat || reasons[l2a (lit)]);
   reasons[l2a (lit)] = 0;
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
@@ -419,6 +424,8 @@ void Checker::backtrack (unsigned previously_propagated) {
 // This is a standard propagation routine without using blocking literals
 // nor without saving the last replacement position.
 
+// TODO: we can have the special case that clauses are unit or falsified while
+// inserted check if this invalidates the current implementation of propagate.
 bool Checker::propagate () {
   bool res = true;
   while (res && next_to_propagate < trail.size ()) {
@@ -541,6 +548,7 @@ vector<int64_t> Checker::build_lrat_proof () {
   return proof_chain_reverse;
 }
 bool Checker::check_lrat () {
+  // TODO: implement :)
   return true;
 }
 
@@ -632,6 +640,14 @@ void Checker::add_clause (const char * type) {
       inconsistent = true;
     }
   }
+  /* else {
+    int unit = 0;
+    const int * p = c->literals;
+    for (unsigned i = 0; i < size; i++) {
+      int lit = *(p + i);
+      if (val (lit) > 0)
+    }
+  } */
   if (!inconsistent && !propagate ()) {
     LOG ("CHECKER inconsistent after adding %s clause and propagating", type);
     inconsistent = true;
@@ -717,9 +733,9 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
             unassign_reason (lit);
             unit = lit;
           }
-          if (unit) propagate ();
         }
       }
+      if (unit) propagate ();
       for (const auto & lit : simplified) mark (lit) = false;
       
       // Remove from hash table, mark as garbage, connect to garbage list.
@@ -731,7 +747,7 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
       garbage = d;
       d->size = 0;
       // If there are enough garbage clauses collect them. only in drat, not lrat
-      if (!opt_lrat && num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
+      if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
         collect_garbage_clauses ();
     } else {
       fatal_message_start ();
