@@ -31,7 +31,8 @@ struct CheckerClause {
   CheckerClause * next;         // collision chain link for hash table
   uint64_t hash;                // previously computed full 64-bit hash
   int64_t id;                   // id of clause
-  unsigned size;                // zero if this is a garbage clause
+  bool garbage;                 // for garbage clauses
+  unsigned size;
   int literals[2];              // otherwise 'literals' of length 'size'
 };
 
@@ -104,6 +105,8 @@ class Checker : public Observer {
   void import_literal (int lit);
   void import_clause (const vector<int> &);
   bool tautological ();
+  CheckerClause * assumption;
+  vector<CheckerClause *> inconsistent_clauses;
 
   static const unsigned num_nonces = 4;
 
@@ -132,6 +135,7 @@ class Checker : public Observer {
   signed char val (int lit);            // returns '-1', '0' or '1'
 
   bool clause_satisfied (CheckerClause*);
+  bool clause_falsified (CheckerClause*);
 
   void assign (int lit);        // assign a literal to true
   void assign_reason (int lit, CheckerClause * reason_clause); 

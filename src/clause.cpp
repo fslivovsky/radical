@@ -350,6 +350,8 @@ void Internal::add_new_original_clause (int64_t id) {
     int64_t new_id = id;
     size_t size = clause.size ();
     if (!size) {
+      if (original.size () > size)
+        new_id = ++clause_id;
       if (!unsat) {
         if (!original.size ()) VERBOSE (1, "found empty original clause");
         else MSG ("found falsified original clause");
