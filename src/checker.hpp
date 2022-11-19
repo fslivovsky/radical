@@ -138,7 +138,8 @@ class Checker : public Observer {
   bool clause_falsified (CheckerClause*);
 
   void assign (int lit);        // assign a literal to true
-  void assign_reason (int lit, CheckerClause * reason_clause); 
+  void assign_reason (int lit, CheckerClause * reason_clause);
+  bool maybe_assign (int lit);
   void unassign_reason (int lit); 
   void assume (int lit);        // assume a literal
   bool propagate ();            // propagate and check for conflicts

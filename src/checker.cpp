@@ -447,11 +447,53 @@ void Checker::backtrack (unsigned previously_propagated) {
 
 /*------------------------------------------------------------------------*/
 
+
+bool Checker::maybe_assign (int lit) {
+  assert (!val (lit));
+  CheckerWatcher & ws = watcher (lit);
+  const auto end = ws.end ();
+  bool res = false;
+  auto j = ws.begin (), i = j;
+  for (; !res && i != end; i++) {
+    CheckerWatch & w = *j++ = *i;
+    if (w.clause->garbage) { j--; continue; }        // skip garbage clauses
+    const unsigned size = w.size;
+    if (size == 1) {
+      assign_reason (lit, w.clause);
+      trail.pop_back ();
+      res = true;
+    }
+    else if (size == 2) {                          
+      if (val (w.blit) < 0) {
+        assign_reason (lit, w.clause);
+        trail.pop_back ();
+        res = true;
+      }
+    } else {
+      assert (size > 2);
+      CheckerClause * c = w.clause;
+      int * lits = c->literals;
+      bool unit = true;
+      for (unsigned i = 0; i < c->size; i++) {
+        if (lits[i] != lit && val (lits[i]) >= 0) {
+          unit = false;
+          break;
+        }
+      }
+      if (unit) {
+        assign_reason (lit, w.clause);
+        trail.pop_back ();
+        res = true;
+      }
+    }
+  }
+  while (i != end) *j++ = *i++;
+  ws.resize (j - ws.begin ());
+  return res;
+}
+
 // This is a standard propagation routine without using blocking literals
 // nor without saving the last replacement position.
-
-// TODO: we can have the special case that clauses are unit or falsified while
-// inserted check if this invalidates the current implementation of propagate.
 bool Checker::propagate () {
   bool res = true;
   while (res && next_to_propagate < trail.size ()) {
@@ -464,7 +506,7 @@ bool Checker::propagate () {
     auto j = ws.begin (), i = j;
     for (; res && i != end; i++) {
       CheckerWatch & w = *j++ = *i;
-      if (!w.clause->size) { j--; continue; }        // skip garbage clauses
+      if (w.clause->garbage) { j--; continue; }        // skip garbage clauses
       assert (w.size == w.clause->size);
       const int blit = w.blit;
       assert (blit != -lit);
@@ -476,9 +518,9 @@ bool Checker::propagate () {
           res = false;
           conflict = w.clause;
         }
-        else assign_reason (w.blit, w.clause);  
+        else assign_reason (w.blit, w.clause);
       }
-      if (size == 2) {                          
+      else if (size == 2) {                          
         if (blit_val < 0) {
           res = false;
           conflict = w.clause;
@@ -708,18 +750,14 @@ void Checker::add_clause (const char * type) {
   
   if (!size) {
     LOG ("CHECKER added and checked empty %s clause", type);
-    if (!inconsistent) {
-      inconsistent = true;
-      inconsistent_clauses.push_back (c);
-    }
+    inconsistent = true;
+    inconsistent_clauses.push_back (c);
   } else if (sat) {
     LOG ("CHECKER added and checked satisfied %s clause", type);
   } else if (!unit) {
     LOG ("CHECKER added and checked falsified %s clause", type);    
-    if (!inconsistent) {
-      inconsistent = true;
-      inconsistent_clauses.push_back (c);
-    }
+    inconsistent = true;
+    inconsistent_clauses.push_back (c);
   } else if (unit == INT_MIN) {
     LOG ("CHECKER added and checked non unit %s clause", type);    
   } else {
@@ -728,12 +766,12 @@ void Checker::add_clause (const char * type) {
     assign_reason (unit, c);
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after adding %s clause and propagating", type);
-      if (!inconsistent) {
-        inconsistent = true;
-        inconsistent_clauses.push_back (conflict);
-      }
+      inconsistent = true;
+      assert (conflict);
+      inconsistent_clauses.push_back (conflict);
     }
   }
+  conflict = 0;
 }
 
 void Checker::add_original_clause (int64_t id, const vector<int> & c) {
@@ -807,19 +845,18 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
       for (unsigned i = 0; i < d->size; i++) {    // as simplified if the code is not buggy
         int lit = *(dp + i);
         assert (mark (lit));
-        if (opt_lrat) {
+        if (opt_lrat) {                            // we can ignore it in drat
           CheckerClause * reason = reasons[l2a (lit)];
+          if (!val (lit)) LOG ("CHECKER skipping lit %d not assigned", lit);
+          else LOG ("CHECKER lit %d reason id %ld", lit, reason->id);
           if (reason == d) {
+            LOG ("CHECKER reason matches, unassigning lit %d", lit);
             assert (val (lit));
             assert (!unit);
             unassign_reason (lit);
             unit = lit;
           }
         }
-      }
-      if (unit && !propagate ()) {
-        assert (inconsistent);
-        inconsistent_clauses.push_back (conflict);
       }
       for (const auto & lit : simplified) mark (lit) = false;
       
@@ -831,6 +868,15 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
       d->next = garbage;
       garbage = d;
       d->garbage = true;
+
+      // update reason for unassigned clause
+      if (unit) {
+        bool res = maybe_assign (unit);           // if deleting clause would
+        assert (res || inconsistent);             // result in a different state
+        if (res)
+          LOG ("CHECKER reason for %d updated from %ld to %ld", unit, id, reasons[l2a (unit)]->id);
+      }
+      
       // If there are enough garbage clauses collect them. only in drat, not lrat
       if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
         collect_garbage_clauses ();
