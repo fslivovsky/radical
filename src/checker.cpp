@@ -72,7 +72,7 @@ CheckerClause * Checker::new_unit_clause () {
   res->size = size;
   num_clauses++;
   res->literals[0] = simplified[0];
-  watcher (res->literals[0]).push_back (CheckerWatch (res->literals[0], res));
+  unit_clauses.push_back (res);
   return res;
 }
 
@@ -107,9 +107,10 @@ CheckerClause * Checker::new_clause () {
   // assert (val (literals [1]) >= 0);
   // we cannot assert this here since we can add falsified clauses.
   // so we have to check for these cases in propagate
-  watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
-  watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
-
+  if (!new_clause_taut) {
+    watcher (literals[0]).push_back (CheckerWatch (literals[1], res));
+    watcher (literals[1]).push_back (CheckerWatch (literals[0], res));
+  } else { LOG ("CHECKER clause not added to watchers"); }
   return res;
 }
 
@@ -205,7 +206,7 @@ void Checker::collect_garbage_clauses () {
     else ws.resize (j - ws.begin ());
   }
 
-  const auto end = inconsistent_clauses.end ();
+  auto end = inconsistent_clauses.end ();
   auto j = inconsistent_clauses.begin ();
   for (auto i = j; i != end; i++) {
     CheckerClause * c = *i;
@@ -214,6 +215,14 @@ void Checker::collect_garbage_clauses () {
     *j++ = c;
   }
   inconsistent_clauses.resize (j - inconsistent_clauses.begin ());
+  end = unit_clauses.end ();
+  j = unit_clauses.begin ();
+  for (auto i = j; i != end; i++) {
+    CheckerClause * c = *i;
+    if (c->garbage) continue;            // garbage clause
+    *j++ = c;
+  }
+  unit_clauses.resize (j - unit_clauses.begin ());
 
   for (CheckerClause * c = garbage, * next; c; c = next)
     next = c->next, delete_clause (c);
@@ -227,7 +236,7 @@ void Checker::collect_garbage_clauses () {
 Checker::Checker (Internal * i)
 :
   internal (i),
-  size_vars (0), vals (0),
+  size_vars (0), vals (0), new_clause_taut (0),
   inconsistent (false), opt_lrat (internal->opts.checkprooflrat),
   num_clauses (0), num_garbage (0), size_clauses (0), clauses (0), garbage (0),
   next_to_propagate (0), last_hash (0), last_id (0)
@@ -340,7 +349,7 @@ bool Checker::tautological () {
   for (auto i = j; i != end; i++) {
     int lit = *i;
     if (lit == prev) continue;          // duplicated literal
-    if (lit == -prev) taut = true;      // tautological clause
+    if (lit == -prev) { taut = true; new_clause_taut = true; }  // tautological clause
     const signed char tmp = val (lit);
     if (tmp > 0) taut = true;           // satisfied literal and clause
     *j++ = prev = lit;
@@ -448,54 +457,35 @@ void Checker::backtrack (unsigned previously_propagated) {
 /*------------------------------------------------------------------------*/
 
 
-bool Checker::maybe_assign (int lit) {
-  assert (!val (lit));
-  CheckerWatcher & ws = watcher (lit);
-  const auto end = ws.end ();
-  bool res = false;
-  auto j = ws.begin (), i = j;
-  for (; !res && i != end; i++) {
-    CheckerWatch & w = *j++ = *i;
-    if (w.clause->garbage) { j--; continue; }        // skip garbage clauses
-    const unsigned size = w.size;
+bool Checker::unit_propagate () {
+  const auto end = unit_clauses.end ();
+  bool res = true;
+  auto j = unit_clauses.begin (), i = j;
+  for (; res && i != end; i++) {
+    CheckerClause * c = *j++ = *i;
+    if (c->garbage) { j--; continue; }        // skip garbage clauses
+    const unsigned size = c->size;
+    assert (size == 1);
     if (size == 1) {
-      assign_reason (lit, w.clause);
-      trail.pop_back ();
-      res = true;
-    }
-    else if (size == 2) {                          
-      if (val (w.blit) < 0) {
-        assign_reason (lit, w.clause);
-        trail.pop_back ();
-        res = true;
-      }
-    } else {
-      assert (size > 2);
-      CheckerClause * c = w.clause;
-      int * lits = c->literals;
-      bool unit = true;
-      for (unsigned i = 0; i < c->size; i++) {
-        if (lits[i] != lit && val (lits[i]) >= 0) {
-          unit = false;
-          break;
-        }
-      }
-      if (unit) {
-        assign_reason (lit, w.clause);
-        trail.pop_back ();
-        res = true;
+      int lit = c->literals[0];
+      int value = val (lit);
+      if (value > 0) continue;
+      else if (!value) assign_reason (c->literals[0], c);
+      else {
+        res = false;
+        conflicts.push_back (c);
       }
     }
   }
   while (i != end) *j++ = *i++;
-  ws.resize (j - ws.begin ());
+  unit_clauses.resize (j - unit_clauses.begin ());
   return res;
 }
 
 // This is a standard propagation routine without using blocking literals
 // nor without saving the last replacement position.
 bool Checker::propagate () {
-  bool res = true;
+  bool res = unit_propagate ();
   while (res && next_to_propagate < trail.size ()) {
     int lit = trail[next_to_propagate++];
     stats.propagations++;
@@ -516,14 +506,14 @@ bool Checker::propagate () {
       if (size == 1) {
         if (blit_val < 0) {
           res = false;
-          conflict = w.clause;
+          conflicts.push_back (w.clause);
         }
         else assign_reason (w.blit, w.clause);
       }
       else if (size == 2) {                          
         if (blit_val < 0) {
           res = false;
-          conflict = w.clause;
+          conflicts.push_back (w.clause);
         }
         else assign_reason (w.blit, w.clause); 
       } else {
@@ -548,7 +538,7 @@ bool Checker::propagate () {
         } else if (!other_val) assign_reason (other, c);
         else {
           res = false;
-          conflict = c;
+          conflicts.push_back (c);
         }
       }
     }
@@ -567,16 +557,17 @@ vector<int64_t> Checker::build_lrat_proof () {
   for (const auto & lit : simplified) {
     justified[l2a (lit)] = true;                 // this makes sense
   }
-  assert (conflict);
   int counter = 0;
-  for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++) {
-    int lit = *i;
-    todo_justify[l2a (lit)] = true;
-    counter++;             // new todo_justify means counter increase
+  for (auto & conflict : conflicts) {
+    for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++) {
+      int lit = *i;
+      todo_justify[l2a (lit)] = true;
+      counter++;             // new todo_justify means counter increase
+    }
+    LOG (conflict->literals, conflict->literals + conflict->size,
+      "CHECKER LRAT conflict with");
+    proof_chain.push_back (conflict->id);  // build proof in reverse, i.e. starting with conflict
   }
-  LOG (conflict->literals, conflict->literals + conflict->size,
-    "CHECKER LRAT conflict with");
-  proof_chain.push_back (conflict->id);  // build proof in reverse, i.e. starting with conflict
   for (auto p = trail.end () - 1; p >= trail.begin (); p--) {
     int lit = *p;
     if (!counter) break;    // invariant is that counter = number of active todo_justify
@@ -591,10 +582,11 @@ vector<int64_t> Checker::build_lrat_proof () {
       continue;
     }
     justified [l2a (lit)] = true;
+    LOG ("CHECKER LRAT justify lit %d", lit);
     counter--;         // one of the todo_justify lits justified
     CheckerClause * reason_clause = reasons[l2a (lit)];
     assert (reason_clause);
-    assert (reason_clause->size);
+    assert (!reason_clause->garbage);
     LOG (reason_clause->literals,
       reason_clause->literals + reason_clause->size,
       "CHECKER LRAT add");
@@ -605,7 +597,7 @@ vector<int64_t> Checker::build_lrat_proof () {
       if (todo_justify[l2a (reason_lit)]) {
         LOG ("CHECKER LRAT lit %d already marked", reason_lit);
       }
-      else if (justified[l2a (reason_lit)]) {        // cant happen as is
+      else if (justified[l2a (reason_lit)]) {
         LOG ("CHECKER LRAT lit %d already justified", reason_lit);
       }
       else {
@@ -630,12 +622,14 @@ bool Checker::check_lrat () {
   
   bool res = false;
   bool falsified = true;
+  conflicts.clear ();
   for (const auto & lit : simplified)
   {
     if (val (lit) > 0) {
       res = true;
       falsified = false;
-      conflict = reasons[l2a (lit)];
+      conflicts.push_back (reasons[l2a (lit)]);
+      LOG ("CHECKER LRAT check already satisfied clause");
     } else if (!val (lit)) {
       assume (-lit);
       falsified = false;
@@ -648,7 +642,7 @@ bool Checker::check_lrat () {
     for (auto & c : inconsistent_clauses) {   // have an inconsistent clause
       if (!c->garbage && clause_falsified (c)) {
         found_conflict = true;
-        conflict = c;
+        conflicts.push_back (c);
         break;
       }
     }
@@ -684,14 +678,14 @@ bool Checker::check_lrat_proof (vector<int64_t> proof_chain) {
       return false;
     }
     if (!c->size) {
-      LOG ("CHECKER LRAT proof contains unneccessary empty clause %ld", id);
+      LOG ("CHECKER LRAT proof contains unnecessary empty clause %ld", id);
       continue;
     }
     int unit = 0;
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
       if (checked_lit (-lit)) continue;
-      assert (!checked_lit (lit));          // we dont want satisfied clauses in our proof
+      // assert (!checked_lit (lit));       // we dont want satisfied clauses in our proof
                                             // points to bug in proof building
                                             // i.e. clauses appearing multiple times
       if (unit) { unit = INT_MIN; break; }  // multiple unfalsified literals
@@ -703,7 +697,7 @@ bool Checker::check_lrat_proof (vector<int64_t> proof_chain) {
     }
     if (!unit) {
       LOG ("CHECKER check succeded, clause falsified %ld", id);
-      assert (proof_chain.back () == id);   // we dont want unneccessary long proofs
+      assert (proof_chain.back () == id);   // we dont want unnecessary long proofs
       break;                                // would also be regarded as bug here
     }
     LOG ("CHECKER found unit clause %ld, assign %d", id, unit);
@@ -767,11 +761,10 @@ void Checker::add_clause (const char * type) {
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after adding %s clause and propagating", type);
       inconsistent = true;
-      assert (conflict);
-      inconsistent_clauses.push_back (conflict);
+      inconsistent_clauses.push_back (conflicts.back ());
     }
   }
-  conflict = 0;
+  conflicts.clear ();
 }
 
 void Checker::add_original_clause (int64_t id, const vector<int> & c) {
@@ -784,12 +777,14 @@ void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   import_clause (c);
   last_id = id;
   assert (id);
+  assert (!new_clause_taut);
   if (tautological () && !internal->opts.checkprooflrat) {  // if clause is tautological
     LOG ("CHECKER ignoring satisfied original clause");     // we can ignore it in drat
   }                                                         // but not in lrat
   else add_clause ("original");
   simplified.clear ();
   unsimplified.clear ();
+  new_clause_taut = false;
   STOP (checking);
 }
 
@@ -803,11 +798,13 @@ void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
   import_clause (c);
   last_id = id;
   assert (id);
+  assert (!new_clause_taut);
   if (tautological () && !opt_lrat) {  // if clause is tautological
     LOG ("CHECKER ignoring satisfied derived clause");      // we can ignore it in drat
   }                                                         // but not in lrat
   else {
-    bool res = opt_lrat ? check_lrat () : check ();
+    bool res = new_clause_taut;
+    if (!res) res = opt_lrat ? check_lrat () : check ();
     if (!res) {
     fatal_message_start ();
     fputs ("failed to check derived clause:\n", stderr);
@@ -820,6 +817,7 @@ void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
   }
   simplified.clear ();
   unsimplified.clear ();
+  new_clause_taut = false;
   STOP (checking);
 }
 
@@ -853,7 +851,16 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
             LOG ("CHECKER reason matches, unassigning lit %d", lit);
             assert (val (lit));
             assert (!unit);
-            unassign_reason (lit);
+            while (trail.size ()) {      // backtracking in trail until we hit
+              int tlit = trail.back ();  // the right lit.
+              if (tlit == lit) break;    // this is needed to make sure the
+              unassign_reason (tlit);    // trail is always a topological order
+              trail.pop_back ();         // for the reason graph
+            }                            // alternatively we could ignore the
+            assert (trail.size ());      // trail while building the lrat proof
+            unassign_reason (lit);       // I don't know which is better or if
+            trail.pop_back ();           // I missed some other solution.
+            next_to_propagate = trail.size ();
             unit = lit;
           }
         }
@@ -869,12 +876,13 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
       garbage = d;
       d->garbage = true;
 
-      // update reason for unassigned clause
       if (unit) {
-        bool res = maybe_assign (unit);           // if deleting clause would
-        assert (res || inconsistent);             // result in a different state
-        if (res)
-          LOG ("CHECKER reason for %d updated from %ld to %ld", unit, id, reasons[l2a (unit)]->id);
+        bool res = propagate ();
+        assert (res || inconsistent);            // result in a different state
+        if (!res) {
+          inconsistent = true;
+          inconsistent_clauses.push_back (conflicts.back ());
+        }
       }
       
       // If there are enough garbage clauses collect them. only in drat, not lrat
@@ -891,6 +899,8 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
   }
   simplified.clear ();
   unsimplified.clear ();
+  conflicts.clear ();
+  new_clause_taut = false;
   STOP (checking);
 }
 

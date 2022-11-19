@@ -82,9 +82,9 @@ class Checker : public Observer {
   vector<bool> justified;              // probably better as array ??
   vector<bool> todo_justify;
   vector<signed char> checked_lits;
-  CheckerClause * conflict;
+  vector<CheckerClause *> conflicts;
 
-  
+  bool new_clause_taut;
   bool inconsistent;            // found or added empty clause
   const bool opt_lrat;
 
@@ -107,7 +107,8 @@ class Checker : public Observer {
   bool tautological ();
   CheckerClause * assumption;
   vector<CheckerClause *> inconsistent_clauses;
-
+  vector<CheckerClause *> unit_clauses;          // we need this because propagate
+                                                 // cannot propagate unit clauses
   static const unsigned num_nonces = 4;
 
   uint64_t nonces[num_nonces];  // random numbers for hashing
@@ -139,7 +140,7 @@ class Checker : public Observer {
 
   void assign (int lit);        // assign a literal to true
   void assign_reason (int lit, CheckerClause * reason_clause);
-  bool maybe_assign (int lit);
+  bool unit_propagate ();
   void unassign_reason (int lit); 
   void assume (int lit);        // assume a literal
   bool propagate ();            // propagate and check for conflicts
