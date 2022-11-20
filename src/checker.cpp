@@ -661,7 +661,7 @@ bool Checker::check_lrat () {
     res = inconsistent;
   }
   else if (!res) res = !propagate ();
-  assert(res);
+  assert(res && conflict);                                // TODO: bug. this fails.
   vector<int64_t> proof = build_lrat_proof ();
   backtrack (previous_trail_size);
   next_to_propagate = previously_propagated;
@@ -857,7 +857,7 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
       for (unsigned i = 0; i < d->size; i++) {    // as simplified if the code is not buggy
         int lit = *(dp + i);
         assert (mark (lit));
-        if (opt_lrat) {                            // we can ignore it in drat
+        if (opt_lrat) {                           // we can ignore it in drat
           CheckerClause * reason = reasons[l2a (lit)];
           if (!val (lit)) LOG ("CHECKER skipping lit %d not assigned", lit);
           else LOG ("CHECKER lit %d reason id %ld", lit, reason->id);
@@ -865,16 +865,6 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
             LOG ("CHECKER reason matches, unassigning lit %d", lit);
             assert (val (lit));
             assert (!unit);
-            while (trail.size ()) {      // backtracking in trail until we hit
-              int tlit = trail.back ();  // the right lit.
-              if (tlit == lit) break;    // this is needed to make sure the
-              unassign_reason (tlit);    // trail is always a topological order
-              trail.pop_back ();         // for the reason graph
-            }                            // alternatively we could ignore the
-            assert (trail.size ());      // trail while building the lrat proof
-            unassign_reason (lit);       // I don't know which is better or if
-            trail.pop_back ();           // I missed some other solution.
-            next_to_propagate = trail.size ();
             unit = lit;
           }
         }
@@ -891,15 +881,27 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
       d->garbage = true;
 
       if (unit) {
-        bool res = propagate ();
+        LOG (trail.begin (), trail.end (), "CHECKER propagated lits before deletion");
+        while (trail.size ()) {      // backtracking in trail until we hit
+          int tlit = trail.back ();  // the right lit.
+          if (tlit == unit) break;    // this is needed to make sure the
+          unassign_reason (tlit);    // trail is always a topological order
+          trail.pop_back ();         // for the reason graph
+        }                            // alternatively we could ignore the
+        assert (trail.size ());      // trail while building the lrat proof
+        unassign_reason (unit);       // I don't know which is better or if
+        trail.pop_back ();           // I missed some other solution.
+        next_to_propagate = 0;      // trail.size (); was buggy because we need to propagate here
+        bool res = propagate ();    // TODO: find out if this is the best solution
+        LOG (trail.begin (), trail.end (), "CHECKER propagated lits after deletion");
         assert (res || inconsistent);            // result in a different state
-        if (!res) {
-          inconsistent = true;
+        if (!res) {                              // TODO: maybe not guaranteed for
+          inconsistent = true;                   // if there are no unit clauses
           inconsistent_clauses.push_back (conflict);
         }
       }
       
-      // If there are enough garbage clauses collect them. only in drat, not lrat
+      // If there are enough garbage clauses collect them.
       if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
         collect_garbage_clauses ();
     } else {
