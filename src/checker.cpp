@@ -661,6 +661,7 @@ bool Checker::check_lrat () {
     res = inconsistent;
   }
   else if (!res) res = !propagate ();
+  LOG (trail.begin (), trail.end (), "CHECKER TODO");  // :/
   assert(res && conflict);                                // TODO: bug. this fails.
   vector<int64_t> proof = build_lrat_proof ();
   backtrack (previous_trail_size);
@@ -751,8 +752,8 @@ void Checker::add_clause (const char * type) {
         unit = lit;
       }
     }
-  }
-  
+  }                             // TODO: after inconsistent state, proof_chain
+                                // can be calculated wrong  
   if (!size) {
     LOG ("CHECKER added and checked empty %s clause", type);
     LOG ("CHECKER clause with id %ld is now falsified", c->id);
