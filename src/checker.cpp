@@ -473,7 +473,7 @@ bool Checker::unit_propagate () {
       else if (!value) assign_reason (c->literals[0], c);
       else {
         res = false;
-        conflicts.push_back (c);
+        conflict = c;
       }
     }
   }
@@ -503,17 +503,17 @@ bool Checker::propagate () {
       const signed char blit_val = val (blit);
       if (blit_val > 0) continue;
       const unsigned size = w.size;
-      if (size == 1) {
+      if (size == 1) {                                 // should not happen
         if (blit_val < 0) {
           res = false;
-          conflicts.push_back (w.clause);
+          conflict = w.clause;
         }
         else assign_reason (w.blit, w.clause);
       }
       else if (size == 2) {                          
         if (blit_val < 0) {
           res = false;
-          conflicts.push_back (w.clause);
+          conflict = w.clause;
         }
         else assign_reason (w.blit, w.clause); 
       } else {
@@ -538,7 +538,7 @@ bool Checker::propagate () {
         } else if (!other_val) assign_reason (other, c);
         else {
           res = false;
-          conflicts.push_back (c);
+          conflict = c;
         }
       }
     }
@@ -555,19 +555,18 @@ vector<int64_t> Checker::build_lrat_proof () {
   for (auto b : justified) b = false;
   for (auto b : todo_justify) b = false;
   for (const auto & lit : simplified) {
+    //if (val (lit) < 0)
     justified[l2a (lit)] = true;                 // this makes sense
   }
   int counter = 0;
-  for (auto & conflict : conflicts) {
-    for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++) {
-      int lit = *i;
-      todo_justify[l2a (lit)] = true;
-      counter++;             // new todo_justify means counter increase
-    }
-    LOG (conflict->literals, conflict->literals + conflict->size,
-      "CHECKER LRAT conflict with");
-    proof_chain.push_back (conflict->id);  // build proof in reverse, i.e. starting with conflict
+  for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++) {
+    int lit = *i;
+    todo_justify[l2a (lit)] = true;
+    counter++;             // new todo_justify means counter increase
   }
+  LOG (conflict->literals, conflict->literals + conflict->size,
+    "CHECKER LRAT conflict with");
+  proof_chain.push_back (conflict->id);  // build proof in reverse, i.e. starting with conflict
   for (auto p = trail.end () - 1; p >= trail.begin (); p--) {
     int lit = *p;
     if (!counter) break;    // invariant is that counter = number of active todo_justify
@@ -619,16 +618,17 @@ vector<int64_t> Checker::build_lrat_proof () {
 bool Checker::check_lrat () {
   stats.checks++;
   unsigned previously_propagated = next_to_propagate;
+  unsigned previous_trail_size = trail.size ();
   
   bool res = false;
   bool falsified = true;
-  conflicts.clear ();
+  conflict = 0;
   for (const auto & lit : simplified)
   {
     if (val (lit) > 0) {
       res = true;
       falsified = false;
-      conflicts.push_back (reasons[l2a (lit)]);
+      conflict = reasons[l2a (lit)];
       LOG ("CHECKER LRAT check already satisfied clause");
     } else if (!val (lit)) {
       assume (-lit);
@@ -640,11 +640,15 @@ bool Checker::check_lrat () {
     assert (inconsistent);                    // our internal state must already
     bool found_conflict = false;              // be inconsistent and we should
     for (auto & c : inconsistent_clauses) {   // have an inconsistent clause
+      LOG ("CHECKER check clause id %ld inconsistent", c->id);
+      LOG ("CHECKER garbage %d, falsified %d", c->garbage, clause_falsified (c));
       if (!c->garbage && clause_falsified (c)) {
+        LOG ("CHECKER yes");
         found_conflict = true;
-        conflicts.push_back (c);
+        conflict = c;
         break;
       }
+      LOG ("CHECKER no");
     }
     assert (found_conflict);
     res = inconsistent;
@@ -652,7 +656,8 @@ bool Checker::check_lrat () {
   else if (!res) res = !propagate ();
   assert(res);
   vector<int64_t> proof = build_lrat_proof ();
-  backtrack (previously_propagated);
+  backtrack (previous_trail_size);
+  next_to_propagate = previously_propagated;
 
   // we backtrack first and then check to emphazise that checking should not
   // be  dependent on the internal state
@@ -744,12 +749,13 @@ void Checker::add_clause (const char * type) {
   
   if (!size) {
     LOG ("CHECKER added and checked empty %s clause", type);
+    LOG ("CHECKER clause with id %ld is now falsified", c->id);
     inconsistent = true;
     inconsistent_clauses.push_back (c);
   } else if (sat) {
     LOG ("CHECKER added and checked satisfied %s clause", type);
   } else if (!unit) {
-    LOG ("CHECKER added and checked falsified %s clause", type);    
+    LOG ("CHECKER added and checked falsified %s clause with id %ld", type, c->id);    
     inconsistent = true;
     inconsistent_clauses.push_back (c);
   } else if (unit == INT_MIN) {
@@ -760,11 +766,13 @@ void Checker::add_clause (const char * type) {
     assign_reason (unit, c);
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after adding %s clause and propagating", type);
+      LOG ("CHECKER clause with id %ld is now falsified", conflict->id);
       inconsistent = true;
-      inconsistent_clauses.push_back (conflicts.back ());
+      inconsistent_clauses.push_back (conflict);
+      assert (clause_falsified (conflict));
     }
   }
-  conflicts.clear ();
+  conflict = 0;
 }
 
 void Checker::add_original_clause (int64_t id, const vector<int> & c) {
@@ -881,7 +889,7 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
         assert (res || inconsistent);            // result in a different state
         if (!res) {
           inconsistent = true;
-          inconsistent_clauses.push_back (conflicts.back ());
+          inconsistent_clauses.push_back (conflict);
         }
       }
       
@@ -899,7 +907,7 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
   }
   simplified.clear ();
   unsimplified.clear ();
-  conflicts.clear ();
+  conflict = 0;
   new_clause_taut = false;
   STOP (checking);
 }

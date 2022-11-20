@@ -82,7 +82,7 @@ class Checker : public Observer {
   vector<bool> justified;              // probably better as array ??
   vector<bool> todo_justify;
   vector<signed char> checked_lits;
-  vector<CheckerClause *> conflicts;
+  CheckerClause * conflict;
 
   bool new_clause_taut;
   bool inconsistent;            // found or added empty clause
