@@ -115,6 +115,7 @@ CheckerClause * Checker::new_clause () {
 }
 
 void Checker::delete_clause (CheckerClause * c) {
+  assert (c);
   if (!c->garbage) {
     assert (num_clauses);
     num_clauses--;
@@ -257,6 +258,12 @@ Checker::Checker (Internal * i)
 
   const size_t bytes = sizeof (CheckerClause);
   assumption = (CheckerClause *) new char [bytes];  // assumption clause
+  assumption->garbage = false;
+  assumption->next = 0;
+  assumption->hash = 0;
+  assumption->id = 0;
+  assumption->size = 0;
+
 }
 
 Checker::~Checker () {
@@ -374,6 +381,7 @@ uint64_t Checker::reduce_hash (uint64_t hash, uint64_t size) {
 }
 
 uint64_t Checker::compute_hash (const int64_t id) {
+  assert (id > 0);
   unsigned j = id % num_nonces;                 // dont know if this is a good
   uint64_t tmp = nonces[j] * (uint64_t) id;     // hash funktion or if it is
   return last_hash = tmp;                       // even better than just using id
@@ -564,8 +572,6 @@ vector<int64_t> Checker::build_lrat_proof () {
     todo_justify[l2a (lit)] = true;
     counter++;             // new todo_justify means counter increase
   }
-  LOG (conflict->literals, conflict->literals + conflict->size,
-    "CHECKER LRAT conflict with");
   proof_chain.push_back (conflict->id);  // build proof in reverse, i.e. starting with conflict
   for (auto p = trail.end () - 1; p >= trail.begin (); p--) {
     int lit = *p;
@@ -586,9 +592,6 @@ vector<int64_t> Checker::build_lrat_proof () {
     CheckerClause * reason_clause = reasons[l2a (lit)];
     assert (reason_clause);
     assert (!reason_clause->garbage);
-    LOG (reason_clause->literals,
-      reason_clause->literals + reason_clause->size,
-      "CHECKER LRAT add");
     proof_chain.push_back (reason_clause->id);
     const int * rp = reason_clause->literals;
     for (unsigned i = 0; i < reason_clause->size; i++) {
@@ -607,7 +610,6 @@ vector<int64_t> Checker::build_lrat_proof () {
     }
   }
   assert (!counter);
-  LOG (proof_chain, "CHECKER LRAT reversed proof:");
   vector<int64_t> proof_chain_reverse;
   for (auto p = proof_chain.end () - 1; p >= proof_chain.begin (); p--)
     proof_chain_reverse.push_back (*p);
@@ -672,7 +674,6 @@ bool Checker::check_lrat () {
 
 bool Checker::check_lrat_proof (vector<int64_t> proof_chain) {
   LOG (simplified, "CHECKER LRAT checking clause");
-  LOG (proof_chain, "CHECKER LRAT with proof_chain:");
 
   assert (proof_chain.size ());
   for (auto & b : checked_lits) b = false;        // empty the vector
@@ -791,7 +792,7 @@ void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   last_id = id;
   assert (id);
   assert (!new_clause_taut);
-  if (tautological () && !internal->opts.checkprooflrat) {  // if clause is tautological
+  if (tautological () && !opt_lrat) {  // if clause is tautological
     LOG ("CHECKER ignoring satisfied original clause");     // we can ignore it in drat
   }                                                         // but not in lrat
   else add_clause ("original");

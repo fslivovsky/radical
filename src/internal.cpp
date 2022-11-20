@@ -20,6 +20,7 @@ Internal::Internal ()
   rephased (0),
   vsize (0),
   max_var (0),
+  clause_id (0),
   level (0),
   vals (0),
   score_inc (1.0),
