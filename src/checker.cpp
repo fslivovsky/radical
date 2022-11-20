@@ -651,6 +651,11 @@ bool Checker::check_lrat () {
       LOG ("CHECKER no");
     }
     assert (found_conflict);
+    if (!found_conflict) {
+      backtrack (previous_trail_size);
+      next_to_propagate = previously_propagated;
+      return false;
+    }
     res = inconsistent;
   }
   else if (!res) res = !propagate ();
