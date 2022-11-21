@@ -106,7 +106,7 @@ class Checker : public Observer {
   void import_clause (const vector<int> &);
   bool tautological ();
   CheckerClause * assumption;
-  vector<CheckerClause *> inconsistent_clauses;
+  CheckerClause * inconsistent_clause;
   vector<CheckerClause *> unit_clauses;          // we need this because propagate
                                                  // cannot propagate unit clauses
   static const unsigned num_nonces = 4;
@@ -147,7 +147,7 @@ class Checker : public Observer {
   void backtrack (unsigned);    // prepare for next clause
   bool check ();                // check simplified clause is implied
   bool check_lrat ();           // equivalent to check but uses
-  vector<int64_t> build_lrat_proof ();      // these two functions
+  vector<int64_t> build_lrat_proof (int);      // these two functions
   bool check_lrat_proof (vector<int64_t>);  // instead of simple propagation
 
   struct {

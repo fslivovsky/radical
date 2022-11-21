@@ -207,6 +207,7 @@ void Checker::collect_garbage_clauses () {
     else ws.resize (j - ws.begin ());
   }
 
+  /*
   auto end = inconsistent_clauses.end ();
   auto j = inconsistent_clauses.begin ();
   for (auto i = j; i != end; i++) {
@@ -216,8 +217,9 @@ void Checker::collect_garbage_clauses () {
     *j++ = c;
   }
   inconsistent_clauses.resize (j - inconsistent_clauses.begin ());
-  end = unit_clauses.end ();
-  j = unit_clauses.begin ();
+  */
+  const auto end = unit_clauses.end ();
+  auto j = unit_clauses.begin ();
   for (auto i = j; i != end; i++) {
     CheckerClause * c = *i;
     if (c->garbage) continue;            // garbage clause
@@ -556,17 +558,23 @@ bool Checker::propagate () {
   return res;
 }
 
-vector<int64_t> Checker::build_lrat_proof () {
+vector<int64_t> Checker::build_lrat_proof (int unit) {
   LOG (simplified, "CHECKER LRAT building proof for");
 
   vector<int64_t> proof_chain;
   for (auto b : justified) b = false;
   for (auto b : todo_justify) b = false;
-  for (const auto & lit : simplified) {
-    if (val (lit) < 0)                             // TODO: find out how
-      justified[l2a (lit)] = true;                 // this makes sense
-  }                                                // and how to prevent
-  int counter = 0;                                 // issues with unnecessarily long proofs
+  if (!unit) {
+    LOG ("CHECKER LRAT skipping justified because we have inconsistent clause");
+  } else if (unit != INT_MIN) {
+    LOG ("CHECKER LRAT only checking %d because new clause already satisfied", unit);
+    justified[l2a (unit)] = true;
+  } else {
+    for (const auto & lit : simplified) {
+      justified[l2a (lit)] = true;
+    }
+  }
+  int counter = 0;
   for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++) {
     int lit = *i;
     todo_justify[l2a (lit)] = true;
@@ -623,47 +631,34 @@ bool Checker::check_lrat () {
   unsigned previous_trail_size = trail.size ();
   
   bool res = false;
-  bool falsified = true;
   conflict = 0;
-  for (const auto & lit : simplified)
-  {
-    if (val (lit) > 0) {
-      res = true;
-      falsified = false;
-      conflict = reasons[l2a (lit)];
-      LOG ("CHECKER LRAT check already satisfied clause");
-    } else if (!val (lit)) {
-      assume (-lit);
-      falsified = false;
-    }
+  int unit = 0;
+  if (inconsistent) {
+    assert(inconsistent_clause);
+    assert(!inconsistent_clause->garbage);
+    assert(clause_falsified (inconsistent_clause));
+    LOG ("CHECKER added clause in already inconsistent state");
+    LOG ("CHECKER check inconsistent clause instead");
+    res = true;
+    conflict = inconsistent_clause;
   }
-
-  if (falsified) {                            // if we add a falsified clause
-    assert (inconsistent);                    // our internal state must already
-    bool found_conflict = false;              // be inconsistent and we should
-    for (auto & c : inconsistent_clauses) {   // have an inconsistent clause
-      LOG ("CHECKER check clause id %ld inconsistent", c->id);
-      LOG ("CHECKER garbage %d, falsified %d", c->garbage, clause_falsified (c));
-      if (!c->garbage && clause_falsified (c)) {
-        LOG ("CHECKER yes");
-        found_conflict = true;
-        conflict = c;
-        break;
+  else {
+    for (const auto & lit : simplified)
+    {
+      if (val (lit) > 0) {
+        res = true;
+        unit = lit;
+        conflict = reasons[l2a (lit)];
+        LOG ("CHECKER LRAT check already satisfied clause");
+      } else if (!val (lit)) {
+        assume (-lit);
       }
-      LOG ("CHECKER no");
     }
-    assert (found_conflict);
-    if (!found_conflict) {
-      backtrack (previous_trail_size);
-      next_to_propagate = previously_propagated;
-      return false;
-    }
-    res = inconsistent;
   }
-  else if (!res) res = !propagate ();
-  LOG (trail.begin (), trail.end (), "CHECKER TODO");  // :/
-  assert(res && conflict);                                // TODO: bug. this fails.
-  vector<int64_t> proof = build_lrat_proof ();
+  if (!res) { res = !propagate (); unit = INT_MIN; }
+  LOG (trail.begin (), trail.end (), "CHECKER TODO");
+  assert(res && conflict);
+  vector<int64_t> proof = build_lrat_proof (unit);
   backtrack (previous_trail_size);
   next_to_propagate = previously_propagated;
 
@@ -757,14 +752,18 @@ void Checker::add_clause (const char * type) {
   if (!size) {
     LOG ("CHECKER added and checked empty %s clause", type);
     LOG ("CHECKER clause with id %ld is now falsified", c->id);
-    inconsistent = true;
-    inconsistent_clauses.push_back (c);
+    if (!inconsistent) {
+      inconsistent = true;
+      inconsistent_clause = c;
+    }
   } else if (sat) {
     LOG ("CHECKER added and checked satisfied %s clause", type);
   } else if (!unit) {
     LOG ("CHECKER added and checked falsified %s clause with id %ld", type, c->id);    
-    inconsistent = true;
-    inconsistent_clauses.push_back (c);
+    if (!inconsistent) {
+      inconsistent = true;
+      inconsistent_clause = c;
+    }
   } else if (unit == INT_MIN) {
     LOG ("CHECKER added and checked non unit %s clause", type);    
   } else {
@@ -775,7 +774,7 @@ void Checker::add_clause (const char * type) {
       LOG ("CHECKER inconsistent after adding %s clause and propagating", type);
       LOG ("CHECKER clause with id %ld is now falsified", conflict->id);
       inconsistent = true;
-      inconsistent_clauses.push_back (conflict);
+      inconsistent_clause = conflict;
       assert (clause_falsified (conflict));
     }
   }
@@ -892,14 +891,26 @@ void Checker::delete_clause (int64_t id, const vector<int> & c) {
         assert (trail.size ());      // trail while building the lrat proof
         unassign_reason (unit);       // I don't know which is better or if
         trail.pop_back ();           // I missed some other solution.
+      }
+      if (unit || (inconsistent && inconsistent_clause->id == d->id)) {
         next_to_propagate = 0;      // trail.size (); was buggy because we need to propagate here
         bool res = propagate ();    // TODO: find out if this is the best solution
         LOG (trail.begin (), trail.end (), "CHECKER propagated lits after deletion");
         assert (res || inconsistent);            // result in a different state
         if (!res) {                              // TODO: maybe not guaranteed for
           inconsistent = true;                   // if there are no unit clauses
-          inconsistent_clauses.push_back (conflict);
+          inconsistent_clause = conflict;
+        } else if (inconsistent) {
+          inconsistent = false;
+          inconsistent_clause = 0;
+          LOG ("CHECKER no longer inconsistent after deletion of clause %ld", d->id);
         }
+      }
+      if (inconsistent) {
+        LOG ("CHECKER new inconsistent clause id %ld, deleted id %ld", inconsistent_clause->id, d->id);
+        assert (inconsistent_clause);
+        assert (!inconsistent_clause->garbage);
+        assert (clause_falsified (inconsistent_clause));
       }
       
       // If there are enough garbage clauses collect them.
