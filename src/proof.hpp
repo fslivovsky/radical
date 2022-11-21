@@ -40,12 +40,12 @@ public:
 
   // Add original clauses to the proof (for online proof checking).
   //
-  void add_original_clause (const vector<int> &);
+  void add_original_clause (int64_t, const vector<int> &);
 
   // Add derived (such as learned) clauses to the proof.
   //
-  void add_derived_empty_clause ();
-  void add_derived_unit_clause (int unit);
+  void add_derived_empty_clause (int64_t);
+  void add_derived_unit_clause (int64_t, int unit);
   void add_derived_clause (Clause *);
   void add_derived_clause (int64_t, const vector<int> &);
 

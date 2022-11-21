@@ -74,25 +74,25 @@ inline void Proof::add_literals (const vector<int> & c) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (const vector<int> & c) {
+void Proof::add_original_clause (int64_t id, const vector<int> & c) {
   LOG (c, "PROOF adding original internal clause");
   add_literals (c);
-  clause_id = ++internal->clause_id;  // TODO: change this so it gets id from
-  add_original_clause ();             // where it was called. Same for the next
-}                                     // two functions
-                                      // also maybe change from int64_t to uint64_t
-void Proof::add_derived_empty_clause () {
+  clause_id = id;
+  add_original_clause ();
+}
+
+void Proof::add_derived_empty_clause (int64_t id) {
   LOG ("PROOF adding empty clause");
   assert (clause.empty ());
-  clause_id = ++internal->clause_id;
+  clause_id = id;
   add_derived_clause ();
 }
 
-void Proof::add_derived_unit_clause (int internal_unit) {
+void Proof::add_derived_unit_clause (int64_t id, int internal_unit) {
   LOG ("PROOF adding unit clause %d", internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
-  clause_id = ++internal->clause_id;
+  clause_id = id;
   add_derived_clause ();
 }
 
