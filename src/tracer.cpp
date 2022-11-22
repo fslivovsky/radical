@@ -45,7 +45,7 @@ inline void Tracer::put_binary_lit (int lit) {
 
 /*------------------------------------------------------------------------*/
 
-void Tracer::add_derived_clause (int64_t, const vector<int> & clause) {
+void Tracer::add_derived_clause (uint64_t, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of derived clause");
   if (binary) file->put ('a');
@@ -57,7 +57,7 @@ void Tracer::add_derived_clause (int64_t, const vector<int> & clause) {
   added++;
 }
 
-void Tracer::delete_clause (int64_t, const vector<int> & clause) {
+void Tracer::delete_clause (uint64_t, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing deletion of clause");
   if (binary) file->put ('d');

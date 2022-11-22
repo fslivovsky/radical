@@ -74,21 +74,21 @@ inline void Proof::add_literals (const vector<int> & c) {
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_original_clause (int64_t id, const vector<int> & c) {
+void Proof::add_original_clause (uint64_t id, const vector<int> & c) {
   LOG (c, "PROOF adding original internal clause");
   add_literals (c);
   clause_id = id;
   add_original_clause ();
 }
 
-void Proof::add_derived_empty_clause (int64_t id) {
+void Proof::add_derived_empty_clause (uint64_t id) {
   LOG ("PROOF adding empty clause");
   assert (clause.empty ());
   clause_id = id;
   add_derived_clause ();
 }
 
-void Proof::add_derived_unit_clause (int64_t id, int internal_unit) {
+void Proof::add_derived_unit_clause (uint64_t id, int internal_unit) {
   LOG ("PROOF adding unit clause %d", internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
@@ -114,7 +114,7 @@ void Proof::delete_clause (Clause * c) {
   delete_clause ();
 }
 
-void Proof::delete_clause (int64_t id, const vector<int> & c) {
+void Proof::delete_clause (uint64_t id, const vector<int> & c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
   add_literals (c);
@@ -122,7 +122,7 @@ void Proof::delete_clause (int64_t id, const vector<int> & c) {
   delete_clause ();
 }
 
-void Proof::add_derived_clause (int64_t id, const vector<int> & c) {
+void Proof::add_derived_clause (uint64_t id, const vector<int> & c) {
   LOG (internal->clause, "PROOF adding derived clause");
   assert (clause.empty ());
   for (const auto & lit : c)

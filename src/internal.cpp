@@ -177,7 +177,7 @@ void Internal::add_original_lit (int lit) {
   if (lit) {
     original.push_back (lit);
   } else {
-    const int64_t id = ++clause_id;
+    const uint64_t id = ++clause_id;
     if (proof) proof->add_original_clause (id, original);
     add_new_original_clause (id);
     original.clear ();

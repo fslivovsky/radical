@@ -311,7 +311,7 @@ void Internal::assign_original_unit (int lit) {
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
 //
-void Internal::add_new_original_clause (int64_t id) {
+void Internal::add_new_original_clause (uint64_t id) {
   if (level) backtrack ();
   LOG (original, "original clause");
   bool skip = false;
@@ -347,7 +347,7 @@ void Internal::add_new_original_clause (int64_t id) {
   if (skip) {
     if (proof) proof->delete_clause (id, original);
   } else {
-    int64_t new_id = id;
+    uint64_t new_id = id;
     size_t size = clause.size ();
     if (!size) {
       if (original.size () > size)

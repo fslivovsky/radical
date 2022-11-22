@@ -23,7 +23,7 @@ typedef const int * const_literal_iterator;
 // is very costly.
 
 struct Clause {
-  int64_t id;         // Used to create LRAT-style proofs
+  uint64_t id;         // Used to create LRAT-style proofs
   bool conditioned:1; // Tried for globally blocked clause elimination.
   bool covered:1;     // Already considered for covered clause elimination.
   bool enqueued:1;    // Enqueued on backward queue.

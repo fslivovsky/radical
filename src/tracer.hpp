@@ -23,8 +23,8 @@ public:
   Tracer (Internal *, File * file, bool binary); // own and delete 'file'
   ~Tracer ();
 
-  void add_derived_clause (int64_t, const vector<int> &);
-  void delete_clause (int64_t, const vector<int> &);
+  void add_derived_clause (uint64_t, const vector<int> &);
+  void delete_clause (uint64_t, const vector<int> &);
 
   bool closed ();
   void close ();

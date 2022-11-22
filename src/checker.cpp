@@ -382,14 +382,14 @@ uint64_t Checker::reduce_hash (uint64_t hash, uint64_t size) {
   return res;
 }
 
-uint64_t Checker::compute_hash (const int64_t id) {
+uint64_t Checker::compute_hash (const uint64_t id) {
   assert (id > 0);
   unsigned j = id % num_nonces;                 // dont know if this is a good
   uint64_t tmp = nonces[j] * (uint64_t) id;     // hash funktion or if it is
   return last_hash = tmp;                       // even better than just using id
 }
 
-CheckerClause ** Checker::find (const int64_t id) {
+CheckerClause ** Checker::find (const uint64_t id) {
   stats.searches++;
   CheckerClause ** res, * c;
   const uint64_t hash = compute_hash (id);
@@ -558,10 +558,10 @@ bool Checker::propagate () {
   return res;
 }
 
-vector<int64_t> Checker::build_lrat_proof (int unit) {
+vector<uint64_t> Checker::build_lrat_proof (int unit) {
   LOG (simplified, "CHECKER LRAT building proof for");
 
-  vector<int64_t> proof_chain;
+  vector<uint64_t> proof_chain;
   for (auto b : justified) b = false;
   for (auto b : todo_justify) b = false;
   if (!unit) {
@@ -618,7 +618,7 @@ vector<int64_t> Checker::build_lrat_proof (int unit) {
     }
   }
   assert (!counter);
-  vector<int64_t> proof_chain_reverse;
+  vector<uint64_t> proof_chain_reverse;
   for (auto p = proof_chain.end () - 1; p >= proof_chain.begin (); p--)
     proof_chain_reverse.push_back (*p);
   return proof_chain_reverse;
@@ -658,7 +658,7 @@ bool Checker::check_lrat () {
   if (!res) { res = !propagate (); unit = INT_MIN; }
   LOG (trail.begin (), trail.end (), "CHECKER TODO");
   assert(res && conflict);
-  vector<int64_t> proof = build_lrat_proof (unit);
+  vector<uint64_t> proof = build_lrat_proof (unit);
   backtrack (previous_trail_size);
   next_to_propagate = previously_propagated;
 
@@ -668,7 +668,7 @@ bool Checker::check_lrat () {
 }
 
 
-bool Checker::check_lrat_proof (vector<int64_t> proof_chain) {
+bool Checker::check_lrat_proof (vector<uint64_t> proof_chain) {
   LOG (simplified, "CHECKER LRAT checking clause");
 
   assert (proof_chain.size ());
@@ -781,7 +781,7 @@ void Checker::add_clause (const char * type) {
   conflict = 0;
 }
 
-void Checker::add_original_clause (int64_t id, const vector<int> & c) {
+void Checker::add_original_clause (uint64_t id, const vector<int> & c) {
   if (!opt_lrat && inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of original clause");
@@ -802,7 +802,7 @@ void Checker::add_original_clause (int64_t id, const vector<int> & c) {
   STOP (checking);
 }
 
-void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
+void Checker::add_derived_clause (uint64_t id, const vector<int> & c) {
   if (!opt_lrat && inconsistent) return;
   START (checking);
   LOG (c, "CHECKER addition of derived clause");
@@ -837,7 +837,7 @@ void Checker::add_derived_clause (int64_t id, const vector<int> & c) {
 
 /*------------------------------------------------------------------------*/
 
-void Checker::delete_clause (int64_t id, const vector<int> & c) {
+void Checker::delete_clause (uint64_t id, const vector<int> & c) {
   if (!opt_lrat && inconsistent) return;
   START (checking);
   LOG (c, "CHECKER checking deletion of clause");

@@ -30,7 +30,7 @@ namespace CaDiCaL {
 struct CheckerClause {
   CheckerClause * next;         // collision chain link for hash table
   uint64_t hash;                // previously computed full 64-bit hash
-  int64_t id;                   // id of clause
+  uint64_t id;                   // id of clause
   bool garbage;                 // for garbage clauses
   unsigned size;
   int literals[2];              // otherwise 'literals' of length 'size'
@@ -113,8 +113,8 @@ class Checker : public Observer {
 
   uint64_t nonces[num_nonces];  // random numbers for hashing
   uint64_t last_hash;           // last computed hash value of clause
-  int64_t last_id;              // id of the last added clause
-  uint64_t compute_hash (int64_t);     // compute and save hash value of clause
+  uint64_t last_id;              // id of the last added clause
+  uint64_t compute_hash (uint64_t);     // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
@@ -122,7 +122,7 @@ class Checker : public Observer {
 
   void enlarge_clauses ();      // enlarge hash table for clauses
   CheckerClause * insert ();               // insert clause in hash table
-  CheckerClause ** find (const int64_t);  // find clause position in hash table
+  CheckerClause ** find (const uint64_t);  // find clause position in hash table
 
   void add_clause (const char * type);
 
@@ -147,8 +147,8 @@ class Checker : public Observer {
   void backtrack (unsigned);    // prepare for next clause
   bool check ();                // check simplified clause is implied
   bool check_lrat ();           // equivalent to check but uses
-  vector<int64_t> build_lrat_proof (int);      // these two functions
-  bool check_lrat_proof (vector<int64_t>);  // instead of simple propagation
+  vector<uint64_t> build_lrat_proof (int);      // these two functions
+  bool check_lrat_proof (vector<uint64_t>);  // instead of simple propagation
 
   struct {
 
@@ -179,9 +179,9 @@ public:
 
   // The following three implement the 'Observer' interface.
   //
-  void add_original_clause (int64_t, const vector<int> &);
-  void add_derived_clause (int64_t, const vector<int> &);
-  void delete_clause (int64_t, const vector<int> &);
+  void add_original_clause (uint64_t, const vector<int> &);
+  void add_derived_clause (uint64_t, const vector<int> &);
+  void delete_clause (uint64_t, const vector<int> &);
 
   void print_stats ();
   void dump ();                 // for debugging purposes only
