@@ -21,6 +21,10 @@ public:
   //
   virtual void add_derived_clause (uint64_t, const vector<int> &) { }
 
+  // Notify the observer that a new clause has been derived and give lrat proof chain.
+  //
+  virtual void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) { }
+
   // Notify the observer that a clause is not used anymore.
   //
   virtual void delete_clause (uint64_t, const vector<int> &) { }

@@ -67,6 +67,8 @@ extern "C" {
 #include "level.hpp"
 #include "limit.hpp"
 #include "logging.hpp"
+#include "lratbuilder.hpp"
+#include "lratchecker.hpp"
 #include "message.hpp"
 #include "observer.hpp"
 #include "occs.hpp"
