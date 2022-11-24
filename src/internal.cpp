@@ -37,6 +37,8 @@ Internal::Internal ()
   proof (0),
   checker (0),
   tracer (0),
+  lratchecker (0),
+  lratbuilder (0),
   opts (this),
 #ifndef QUIET
   profiles (this),
@@ -59,6 +61,8 @@ Internal::~Internal () {
   if (proof) delete proof;
   if (tracer) delete tracer;
   if (checker) delete checker;
+  if (lratchecker) delete lratchecker;
+  if (lratbuilder) delete lratbuilder;
   if (vals) { vals -= vsize; delete [] vals; }
 }
 

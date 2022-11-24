@@ -4,9 +4,9 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-Tracer::Tracer (Internal * i, File * f, bool b) :
+Tracer::Tracer (Internal * i, File * f, bool b, bool l) :
   internal (i),
-  file (f), binary (b),
+  file (f), binary (b), lrat (l),
   added (0), deleted (0)
 {
   (void) internal;

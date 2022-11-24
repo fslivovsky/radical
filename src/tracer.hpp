@@ -12,6 +12,7 @@ class Tracer : public Observer {
   Internal * internal;
   File * file;
   bool binary;
+  bool lrat;
 
   int64_t added, deleted;
 
@@ -20,7 +21,7 @@ class Tracer : public Observer {
 
 public:
 
-  Tracer (Internal *, File * file, bool binary); // own and delete 'file'
+  Tracer (Internal *, File * file, bool binary, bool lrat); // own and delete 'file'
   ~Tracer ();
 
   void add_derived_clause (uint64_t, const vector<int> &);

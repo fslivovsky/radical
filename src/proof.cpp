@@ -10,29 +10,43 @@ using namespace std;
 
 void Internal::new_proof_on_demand () {
   if (!proof) {
-    proof = new Proof (this);
+    bool lrat = opts.checkprooflrat;
+    proof = new Proof (this, lrat);
     LOG ("connecting proof to internal solver");
+    if (lrat) {
+      assert (!lratbuilder);
+      lratbuilder = new LratBuilder (this);
+      LOG ("PROOF connecting lrat chain builder");
+      proof->connect (lratbuilder);
+    }
   }
 }
 
-// Enable proof tracing.
+// Enable proof tracing.  TODO: add lratbuilder to bottom of obververs
 
 void Internal::trace (File * file) {
   assert (!tracer);
   new_proof_on_demand ();
-  tracer = new Tracer (this, file, opts.binary);
+  tracer = new Tracer (this, file, opts.binary, opts.checkprooflrat);
   LOG ("PROOF connecting proof tracer");
   proof->connect (tracer);
 }
 
-// Enable proof checking.
+// Enable proof checking.  TODO: add lratbuilder to bottom of obververs
 
 void Internal::check () {
   assert (!checker);
+  assert (!lratchecker);
   new_proof_on_demand ();
-  checker = new Checker (this);
-  LOG ("PROOF connecting proof checker");
-  proof->connect (checker);
+  if (opts.checkprooflrat) {
+    lratchecker = new LratChecker (this);
+    LOG ("PROOF connecting lrat proof checker");
+    proof->connect (lratchecker);
+  } else {
+    checker = new Checker (this);
+    LOG ("PROOF connecting proof checker");
+    proof->connect (checker);
+  }
 }
 
 // We want to close a proof trace and stop checking as soon we are done.
@@ -51,7 +65,7 @@ void Internal::flush_trace () {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal * s) : internal (s) { LOG ("PROOF new"); }
+Proof::Proof (Internal * s, bool l) : internal (s), lrat (l) { LOG ("PROOF new"); }
 
 Proof::~Proof () { LOG ("PROOF delete"); }
 
@@ -186,8 +200,17 @@ void Proof::add_original_clause () {
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
   assert (clause_id);
-  for (size_t i = 0; i < observers.size (); i++)
+  if (lrat) {
+    assert (!observers.empty ());
+    proof_chain = observers[0]->add_clause_get_proof (clause_id, clause);
+    for (size_t i = 1; i < observers.size (); i++)
+      observers[i]->add_derived_clause (clause_id, clause, proof_chain);
+  }
+  else {
+    for (size_t i = 0; i < observers.size (); i++)
     observers[i]->add_derived_clause (clause_id, clause);
+  }
+  proof_chain.clear ();
   clause.clear ();
 }
 

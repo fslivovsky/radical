@@ -239,7 +239,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     if (!unit) {
       LOG ("LRATCHECKER check succeded, clause falsified %ld", id);  // TODO:
       assert (proof_chain.back () == id);      // we dont want unnecessary long proofs
-      break;                                   // would also be regarded as bug here
+      return true;                           // would also be regarded as bug here
     }
     LOG ("LRATCHECKER found unit clause %ld, assign %d", id, unit);
     checked_lit (unit) = true;
@@ -284,6 +284,11 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
   imported_clause.clear ();
   STOP (checking);
 }
+
+/*
+void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
+}
+*/
 
 /*------------------------------------------------------------------------*/
 

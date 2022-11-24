@@ -210,6 +210,8 @@ struct Internal {
   Proof * proof;                // clausal proof observers if non zero
   Checker * checker;            // online proof checker observing proof
   Tracer * tracer;              // proof to file tracer observing proof
+  LratChecker * lratchecker;    // online lrat checker observing proof
+  LratBuilder * lratbuilder;    // lrat proof chain builder observing proof
   Options opts;                 // run-time options
   Stats stats;                  // statistics
 #ifndef QUIET

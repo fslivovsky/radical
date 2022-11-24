@@ -594,7 +594,7 @@ vector<uint64_t> LratBuilder::build_lrat_proof (int unit) {
   vector<uint64_t> proof_chain_reverse;
   for (auto p = proof_chain.end () - 1; p >= proof_chain.begin (); p--)
     proof_chain_reverse.push_back (*p);
-  return proof_chain_reverse;
+  return valid_proof_chain = proof_chain_reverse;
 }
 
 
@@ -772,6 +772,11 @@ void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
   STOP (checking);
 }
 
+vector<uint64_t> LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> & c) {
+  add_derived_clause (id, c);
+  return valid_proof_chain;
+}
+
 void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRATBUILDER addition of derived clause");
@@ -783,14 +788,15 @@ void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
   assert (id);
   assert (!new_clause_taut);
   tautological ();
-  bool res = new_clause_taut;   // TODO: clause should be propagated to compute
+  bool res = new_clause_taut;
+  if (!res) res = check_lrat ();
   if (!res) {                   // proof but not checked
-  fatal_message_start ();
-  fputs ("failed to check derived clause:\n", stderr);
-  for (const auto & lit : unsimplified)
-    fprintf (stderr, "%d ", lit);
-  fputc ('0', stderr);
-  fatal_message_end ();
+    fatal_message_start ();
+    fputs ("failed to check derived clause:\n", stderr);
+    for (const auto & lit : unsimplified)
+      fprintf (stderr, "%d ", lit);
+    fputc ('0', stderr);
+    fatal_message_end ();
   }
   else add_clause ("derived");
   simplified.clear ();

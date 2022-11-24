@@ -19,8 +19,10 @@ class Proof {
   Internal * internal;
 
   vector<int> clause;           // of external literals
+  vector<uint64_t> proof_chain;   // lrat style proof chain of clause
   uint64_t clause_id;            // id of added clause
   vector<Observer *> observers; // owned, so deleted in destructor
+  bool lrat;
 
   void add_literal (int internal_lit);  // add to 'clause'
   void add_literals (Clause *);         // add to 'clause'
@@ -33,7 +35,7 @@ class Proof {
 
 public:
 
-  Proof (Internal *);
+  Proof (Internal *, bool);
   ~Proof ();
 
   void connect (Observer * v) { observers.push_back (v); }

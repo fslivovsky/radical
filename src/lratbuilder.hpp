@@ -84,6 +84,8 @@ class LratBuilder : public Observer {
   vector<signed char> checked_lits;
   LratBuilderClause * conflict;
 
+  vector<uint64_t> valid_proof_chain;
+  
   bool new_clause_taut;
   bool inconsistent;            // found or added empty clause
 
@@ -181,6 +183,7 @@ public:
   void add_original_clause (uint64_t, const vector<int> &);
   void add_derived_clause (uint64_t, const vector<int> &);
   void delete_clause (uint64_t, const vector<int> &);
+  vector<uint64_t> add_clause_get_proof (uint64_t, const vector<int> &);
 
   void print_stats ();
   void dump ();                 // for debugging purposes only
