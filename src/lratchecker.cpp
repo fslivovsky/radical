@@ -59,7 +59,7 @@ void LratChecker::delete_clause (LratCheckerClause * c) {
 void LratChecker::enlarge_clauses () {
   assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2*size_clauses : 1;
-  LOG ("LRATCHECKER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
+  LOG ("LRAT CHECKER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
     (uint64_t) size_clauses, (uint64_t) new_size_clauses);
   LratCheckerClause ** new_clauses;
   new_clauses = new LratCheckerClause * [ new_size_clauses ];
@@ -84,7 +84,7 @@ void LratChecker::collect_garbage_clauses () {
 
   stats.collections++;
 
-  LOG ("LRATCHECKER collecting %" PRIu64 " garbage clauses %.0f%%",
+  LOG ("LRAT CHECKER collecting %" PRIu64 " garbage clauses %.0f%%",
     num_garbage, percent (num_garbage, num_clauses));
 
   for (LratCheckerClause * c = garbage, * next; c; c = next)
@@ -102,7 +102,7 @@ LratChecker::LratChecker (Internal * i)
   size_vars (0), num_clauses (0), num_garbage (0),
   size_clauses (0), clauses (0), garbage (0), last_hash (0), last_id (0)
 {
-  LOG ("LRATCHECKER new");
+  LOG ("LRAT CHECKER new");
 
   // Initialize random number table for hash function.
   //
@@ -119,7 +119,7 @@ LratChecker::LratChecker (Internal * i)
 }
 
 LratChecker::~LratChecker () {
-  LOG ("LRATCHECKER delete");
+  LOG ("LRAT CHECKER delete");
   for (size_t i = 0; i < size_clauses; i++)
     for (LratCheckerClause * c = clauses[i], * next; c; c = next)
       next = c->next, delete_clause (c);
@@ -136,7 +136,7 @@ void LratChecker::enlarge_vars (int64_t idx) {
 
   int64_t new_size_vars = size_vars ? 2*size_vars : 2;
   while (idx >= new_size_vars) new_size_vars *= 2;
-  LOG ("LRATCHECKER enlarging variables of checker from %" PRId64 " to %" PRId64 "",
+  LOG ("LRAT CHECKER enlarging variables of checker from %" PRId64 " to %" PRId64 "",
     size_vars, new_size_vars);
   
   marks.resize (2*new_size_vars);
@@ -207,7 +207,7 @@ void LratChecker::insert () {
 /*------------------------------------------------------------------------*/
 
 bool LratChecker::check (vector<uint64_t> proof_chain) {
-  LOG (imported_clause, "LRATCHECKER LRAT checking clause");
+  LOG (imported_clause, "LRAT CHECKER LRAT checking clause");
   stats.checks++;
   assert (proof_chain.size ());
   for (auto & b : checked_lits) b = false;        // empty the vector
@@ -219,29 +219,30 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     LratCheckerClause * c = * find (id);
     if (!c)
     {
-      LOG ("LRATCHECKER LRAT failed. Did not find clause with id %ld", id);
+      LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %ld", id);
       return false;
     }
     int unit = 0;
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
       if (checked_lit (-lit)) continue;
-      assert (!checked_lit (lit));          // we dont want satisfied clauses in our proof
+      assert (!checked_lit (lit));          // TODO: also buggy :/ 
+                                            // we dont want satisfied clauses in our proof
                                             // points to bug in proof building
                                             // i.e. clauses appearing multiple times
       if (unit) { unit = INT_MIN; break; }  // multiple unfalsified literals
       unit = lit;                           // potential unit
     }
     if (unit == INT_MIN) {
-      LOG ("LRATCHECKER check failed, found non unit clause %ld", id);
+      LOG ("LRAT CHECKER check failed, found non unit clause %ld", id);
       return false;
     }
     if (!unit) {
-      LOG ("LRATCHECKER check succeded, clause falsified %ld", id);  // TODO:
-      assert (proof_chain.back () == id);      // we dont want unnecessary long proofs
+      LOG ("LRAT CHECKER check succeded, clause falsified %ld", id);  // TODO:
+      assert (proof_chain.back () == id);      // TODO: buggy :( we dont want unnecessary long proofs
       return true;                           // would also be regarded as bug here
     }
-    LOG ("LRATCHECKER found unit clause %ld, assign %d", id, unit);
+    LOG ("LRAT CHECKER found unit clause %ld, assign %d", id, unit);
     checked_lit (unit) = true;
   }
   return false;         // check failed because no empty clause was found
@@ -251,8 +252,8 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
 
 void LratChecker::add_original_clause (uint64_t id, const vector<int> & c) {
   START (checking);
-  LOG (c, "LRATCHECKER addition of original clause");
-  LOG ("LRATCHECKER clause id %ld", id);
+  LOG (c, "LRAT CHECKER addition of original clause");
+  LOG ("LRAT CHECKER clause id %ld", id);
   stats.added++;
   stats.original++;
   import_clause (c);
@@ -265,8 +266,8 @@ void LratChecker::add_original_clause (uint64_t id, const vector<int> & c) {
 
 void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const vector<uint64_t>& proof_chain) {
   START (checking);
-  LOG (c, "LRATCHECKER addition of derived clause");
-  LOG ("LRATCHECKER clause id %ld", id);
+  LOG (c, "LRAT CHECKER addition of derived clause");
+  LOG ("LRAT CHECKER clause id %ld", id);
   stats.added++;
   stats.derived++;
   import_clause (c);
@@ -294,8 +295,8 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
 
 void LratChecker::delete_clause (uint64_t id, const vector<int> & c) {
   START (checking);
-  LOG (c, "LRATCHECKER checking deletion of clause");
-  LOG ("LRATCHECKER clause id %ld", id);
+  LOG (c, "LRAT CHECKER checking deletion of clause");
+  LOG ("LRAT CHECKER clause id %ld", id);
   stats.deleted++;
   import_clause (c);
   last_id = id;

@@ -116,13 +116,19 @@ public:
   void add_original_clause (uint64_t, const vector<int> &);
   // check the proof chain for the new clause and add it to the checker
   void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t> &);
+
   // could later be used for frat. just assume the clause is correct because we
   // have no proof
-  // void add_derived_clause (uint64_t, const vector<int> &); TODO: add this to
+  void add_derived_clause (uint64_t, const vector<int> &) { } // TODO: add this to
                                                             // make partial (frat)
                                                             // checks possible.
   // check if the clause is actually present and delete it from the checker
   void delete_clause (uint64_t, const vector<int> &);
+  virtual vector<uint64_t> add_clause_get_proof (uint64_t, const vector<int> &) {
+    vector<uint64_t> a;
+    assert(false);
+    return a;
+  }
 
   void print_stats ();
   void dump ();                 // for debugging purposes only

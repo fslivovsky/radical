@@ -57,6 +57,20 @@ void Tracer::add_derived_clause (uint64_t, const vector<int> & clause) {
   added++;
 }
 
+
+// TODO: actually output LRAT / FRAT / binary if the setting is set.
+void Tracer::add_derived_clause (uint64_t, const vector<int> & clause, const vector<uint64_t> &) {
+  if (file->closed ()) return;
+  LOG ("TRACER tracing addition of derived clause");
+  if (binary) file->put ('a');
+  for (const auto & external_lit : clause)
+    if (binary) put_binary_lit (external_lit);
+    else file->put (external_lit), file->put (' ');
+  if (binary) put_binary_zero ();
+  else file->put ("0\n");
+  added++;
+}
+
 void Tracer::delete_clause (uint64_t, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing deletion of clause");
