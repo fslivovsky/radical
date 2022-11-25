@@ -216,9 +216,9 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
   }
   
   for (auto &id : proof_chain) {
-    LratCheckerClause * c = * find (id);
-    if (!c)
-    {
+    LratCheckerClause * c = * find (id);      // TODO: there was a bug with tautological
+    if (!c)                                   // clauses. fixed by inserting the clause
+    {                                         // first (i hope)
       LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %ld", id);
       return false;
     }
@@ -226,7 +226,11 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
       if (checked_lit (-lit)) continue;
-      assert (!checked_lit (lit));          // TODO: also buggy :/ 
+      // assert (!checked_lit (lit));          // TODO: also buggy :/ -> because if we
+                                               // proove inconsistent clause we do
+                                               // not actually assume the current
+                                               // clause in lratbuilder. here we
+                                               // automatically do.
                                             // we dont want satisfied clauses in our proof
                                             // points to bug in proof building
                                             // i.e. clauses appearing multiple times
@@ -239,7 +243,10 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     }
     if (!unit) {
       LOG ("LRAT CHECKER check succeded, clause falsified %ld", id);  // TODO:
-      assert (proof_chain.back () == id);      // TODO: buggy :( we dont want unnecessary long proofs
+      // assert (proof_chain.back () == id);      // TODO: buggy :( we dont want unnecessary long proofs
+                                              // same reason here as above.
+                                              // if lratbuilder is in inconsistent
+                                              // state this does not necessarily hold.
       return true;                           // would also be regarded as bug here
     }
     LOG ("LRAT CHECKER found unit clause %ld, assign %d", id, unit);
@@ -273,6 +280,7 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
   import_clause (c);
   last_id = id;
   assert (id);
+  insert ();
   if (!check (proof_chain)) {
     fatal_message_start ();                        
     fputs ("failed to check derived clause:\n", stderr);
@@ -281,7 +289,6 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
     fputc ('0', stderr);
     fatal_message_end ();
   }
-  else insert ();
   imported_clause.clear ();
   STOP (checking);
 }

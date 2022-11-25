@@ -84,7 +84,9 @@ class LratBuilder : public Observer {
   vector<signed char> checked_lits;
   LratBuilderClause * conflict;
 
-  vector<uint64_t> chain;
+  vector<uint64_t> chain;                  // lrat style proof chain
+  vector<uint64_t> reverse_chain;          // what the name says
+  int unjustified;                         // number of lits we need to justify
   
   bool new_clause_taut;
   bool inconsistent;            // found or added empty clause
@@ -156,7 +158,9 @@ class LratBuilder : public Observer {
   void proof_lit (int lit);
   // if the state is already inconsistent we can add any clause by proving the inconsistent clause
   void proof_inconsistent ();
-  
+  // combining similar code from the above
+  void help_proof ();
+
   struct {
 
     int64_t added;              // number of added clauses

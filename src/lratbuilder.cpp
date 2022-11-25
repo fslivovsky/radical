@@ -48,7 +48,7 @@ inline LratBuilderWatcher & LratBuilder::watcher (int lit) {
 /*------------------------------------------------------------------------*/
 LratBuilderClause * LratBuilder::new_clause () {
   const size_t size = simplified.size ();
-  assert (size > 1), assert (size <= UINT_MAX);
+  assert (size <= UINT_MAX);
   const size_t bytes = sizeof (LratBuilderClause) + (size) * sizeof (int);
   LratBuilderClause * res = (LratBuilderClause *) new char [bytes];
   res->garbage = false;
@@ -88,7 +88,7 @@ LratBuilderClause * LratBuilder::new_clause () {
   if (!new_clause_taut) {
     watcher (literals[0]).push_back (LratBuilderWatch (literals[1], res));
     watcher (literals[1]).push_back (LratBuilderWatch (literals[0], res));
-  } else { LOG ("LRATBUILDER clause not added to watchers"); }
+  } else { LOG ("LRAT BUILDER clause not added to watchers"); }
   return res;
 }
 
@@ -107,7 +107,7 @@ void LratBuilder::delete_clause (LratBuilderClause * c) {
 void LratBuilder::enlarge_clauses () {
   assert (num_clauses == size_clauses);
   const uint64_t new_size_clauses = size_clauses ? 2*size_clauses : 1;
-  LOG ("LRATBUILDER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
+  LOG ("LRAT BUILDER enlarging clauses of checker from %" PRIu64 " to %" PRIu64,
     (uint64_t) size_clauses, (uint64_t) new_size_clauses);
   LratBuilderClause ** new_clauses;
   new_clauses = new LratBuilderClause * [ new_size_clauses ];
@@ -152,7 +152,7 @@ void LratBuilder::collect_garbage_clauses () {
   stats.collections++;
 
 
-  LOG ("LRATBUILDER collecting %" PRIu64 " garbage clauses %.0f%%",
+  LOG ("LRAT BUILDER collecting %" PRIu64 " garbage clauses %.0f%%",
     num_garbage, percent (num_garbage, num_clauses));
 
   for (int lit = -size_vars + 1; lit < size_vars; lit++) {
@@ -195,7 +195,7 @@ LratBuilder::LratBuilder (Internal * i)
   num_clauses (0), num_garbage (0), size_clauses (0), clauses (0), garbage (0),
   next_to_propagate (0), last_hash (0), last_id (0)
 {
-  LOG ("LRATBUILDER new");
+  LOG ("LRAT BUILDER new");
 
   // Initialize random number table for hash function.
   //
@@ -220,7 +220,7 @@ LratBuilder::LratBuilder (Internal * i)
 }
 
 LratBuilder::~LratBuilder () {
-  LOG ("LRATBUILDER delete");
+  LOG ("LRAT BUILDER delete");
   vals -= size_vars;
   delete [] vals;
   for (size_t i = 0; i < size_clauses; i++)
@@ -245,7 +245,7 @@ void LratBuilder::enlarge_vars (int64_t idx) {
 
   int64_t new_size_vars = size_vars ? 2*size_vars : 2;
   while (idx >= new_size_vars) new_size_vars *= 2;
-  LOG ("LRATBUILDER enlarging variables of checker from %" PRId64 " to %" PRId64 "",
+  LOG ("LRAT BUILDER enlarging variables of checker from %" PRId64 " to %" PRId64 "",
     size_vars, new_size_vars);
 
   signed char * new_vals;
@@ -502,74 +502,88 @@ bool LratBuilder::propagate () {
   }
   return res;
 }
-void LratBuilder::proof_taut () {
-  LOG (simplified, "LRATBUILDER tautological clause proves itself: ");
-  chain.push_back (last_id);
-}
 
-void LratBuilder::proof_lit (int lit) {
-  LOG ("LRATBUILDER satisfied clause is proven by %d", lit);
-}
-void LratBuilder::proof_inconsistent () {
-  LOG ("LRATBUILDER inconsistent clause proves anything");
-}
-void LratBuilder::proof_clause () {
-  LOG (simplified, "LRATBUILDER LRAT building proof for");
-
-  vector<uint64_t> proof_chain;
-  for (auto b : justified) b = false;
-  for (auto b : todo_justify) b = false;
-  
-  // marking clause as 
-  for (const auto & lit : simplified) {
-    justified[l2a (lit)] = true;
-  }
-  int counter = 0;
-  for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++) {
-    int lit = *i;
-    todo_justify[l2a (lit)] = true;
-    counter++;             // new todo_justify means counter increase
-  }
-  proof_chain.push_back (conflict->id);  // build proof in reverse, i.e. starting with conflict
-  for (auto p = trail.end () - 1; p >= trail.begin (); p--) {
+void LratBuilder::help_proof () {
+  LOG ("LRAT BUILDER checking lits on trail in reverse order");
+  for (auto p = trail.end () - 1; unjustified && p >= trail.begin (); p--) {
     int lit = *p;
-    if (!counter) break;    // invariant is that counter = number of active todo_justify
-                            // this means we are done here
     if (!todo_justify [l2a (lit)]) {
-      LOG ("LRATBUILDER LRAT lit %d not needed", lit);
+      LOG ("LRAT BUILDER lit %d not needed", lit);
       continue;
     }
     if (justified [l2a (lit)]) {
-      LOG ("LRATBUILDER LRAT lit %d already justified", lit);
-      counter--;       // one of the todo_justify lits justified
+      LOG ("LRAT BUILDER lit %d already justified", lit);
+      unjustified--;       // one of the todo_justify lits justified
       continue;
     }
     justified [l2a (lit)] = true;
-    LOG ("LRATBUILDER LRAT justify lit %d", lit);
-    counter--;         // one of the todo_justify lits justified
+    LOG ("LRAT BUILDER justify lit %d", lit);
+    unjustified--;         // one of the todo_justify lits justified
     LratBuilderClause * reason_clause = reasons[l2a (lit)];
     assert (reason_clause);
     assert (!reason_clause->garbage);
-    proof_chain.push_back (reason_clause->id);
+    reverse_chain.push_back (reason_clause->id);
     const int * rp = reason_clause->literals;
     for (unsigned i = 0; i < reason_clause->size; i++) {
       int reason_lit = *(rp + i);
       if (todo_justify[l2a (reason_lit)]) {
-        LOG ("LRATBUILDER LRAT lit %d already marked", reason_lit);
+        LOG ("LRAT BUILDER lit %d already marked", reason_lit);
+        continue;
       }
-      else if (justified[l2a (reason_lit)]) {
-        LOG ("LRATBUILDER LRAT lit %d already justified", reason_lit);
+      if (justified[l2a (reason_lit)]) {
+        LOG ("LRAT BUILDER lit %d already justified", reason_lit);
+        continue;
       }
-      else {
-        LOG ("LRATBUILDER LRAT need to justify new lit %d", reason_lit);
-        counter++;             // new todo_justify means counter increase
-        todo_justify[l2a (reason_lit)] = true;
-      }
+      LOG ("LRAT BUILDER need to justify lit %d", reason_lit);
+      unjustified++;             // new todo_justify means unjustified increase
+      todo_justify[l2a (reason_lit)] = true;
     }
   }
-  assert (!counter);
-  for (auto p = proof_chain.end () - 1; p >= proof_chain.begin (); p--)
+  assert (!unjustified);
+  for (auto p = reverse_chain.end () - 1; p >= reverse_chain.begin (); p--) {
+    assert (*p);
     chain.push_back (*p);
+  }
+}
+
+void LratBuilder::proof_taut () {
+  LOG (simplified, "LRAT BUILDER tautological clause proves itself: ");
+  chain.push_back (last_id);
+}
+
+void LratBuilder::proof_lit (int lit) {
+  LOG ("LRAT BUILDER satisfied clause is proven by %d", lit);
+  unjustified = 1;   // is always > 0 if we have work to do
+  todo_justify[l2a (lit)] = true;
+  help_proof ();
+}
+
+void LratBuilder::proof_inconsistent () {
+  LOG ("LRAT BUILDER inconsistent clause proves anything");
+  unjustified = inconsistent_clause->size;   // is always > 0 if we have work to do
+  const int* end = inconsistent_clause->literals + inconsistent_clause->size;
+  for (int * i = inconsistent_clause->literals; i < end; i++) {
+    int lit = *i;
+    todo_justify[l2a (lit)] = true;
+  }
+  reverse_chain.push_back (inconsistent_clause->id);
+  help_proof ();
+}
+
+void LratBuilder::proof_clause () {
+  LOG (simplified, "LRAT BUILDER LRAT building proof for");
+  // marking clause as justified
+  for (const auto & lit : simplified) {
+    justified[l2a (lit)] = true;
+  }
+  unjustified = conflict->size;   // is always > 0 if we have work to do
+  const int* end = conflict->literals + conflict->size;
+  for (int * i = conflict->literals; i < end; i++) {
+    int lit = *i;
+    todo_justify[l2a (lit)] = true;
+  }
+  reverse_chain.push_back (conflict->id);
+  help_proof ();
 }
 
 
@@ -583,6 +597,10 @@ bool LratBuilder::build_chain_if_possible () {
     return true;
   }
 
+  reverse_chain.clear ();
+  for (auto b : justified) b = false;
+  for (auto b : todo_justify) b = false;
+
   if (inconsistent) {
     assert (inconsistent_clause);
     proof_inconsistent ();
@@ -594,13 +612,19 @@ bool LratBuilder::build_chain_if_possible () {
   for (const auto & lit : simplified)
   {
     if (val (lit) > 0) {
+      backtrack (previous_trail_size);
+      next_to_propagate = previously_propagated;
       proof_lit (lit);
       return true;
     } else if (!val (lit)) {
       assume (-lit);
     }
   }
-  if (propagate ()) return false;
+  if (propagate ()) {
+    backtrack (previous_trail_size);
+    next_to_propagate = previously_propagated;
+    return false;
+  }
   
   proof_clause ();
 
@@ -619,7 +643,7 @@ void LratBuilder::add_clause (const char * type) {
 
   LratBuilderClause * c = insert ();
   if (inconsistent) {
-    LOG ("LRATBUILDER state already inconsistent so nothing more to do");
+    LOG ("LRAT BUILDER state already inconsistent so nothing more to do");
     return;
   }
 
@@ -637,25 +661,25 @@ void LratBuilder::add_clause (const char * type) {
     }
   }
   if (!size) {
-    LOG ("LRATBUILDER added and checked empty %s clause", type);
-    LOG ("LRATBUILDER clause with id %ld is now falsified", c->id);
+    LOG ("LRAT BUILDER added and checked empty %s clause", type);
+    LOG ("LRAT BUILDER clause with id %ld is now falsified", c->id);
     inconsistent = true;
     inconsistent_clause = c;
   } else if (sat) {
-    LOG ("LRATBUILDER added and checked satisfied %s clause", type);
+    LOG ("LRAT BUILDER added and checked satisfied %s clause", type);
   } else if (!unit) {
-    LOG ("LRATBUILDER added and checked falsified %s clause with id %ld", type, c->id);    
+    LOG ("LRAT BUILDER added and checked falsified %s clause with id %ld", type, c->id);    
     inconsistent = true;
     inconsistent_clause = c;
   } else if (unit == INT_MIN) {
-    LOG ("LRATBUILDER added and checked non unit %s clause", type);    
+    LOG ("LRAT BUILDER added and checked non unit %s clause", type);    
   } else {
     stats.units++;
-    LOG ("LRATBUILDER checked and assigned %s unit clause %d", type, unit);
+    LOG ("LRAT BUILDER checked and assigned %s unit clause %d", type, unit);
     assign_reason (unit, c);
     if (!propagate ()) {
-      LOG ("LRATBUILDER inconsistent after adding %s clause and propagating", type);
-      LOG ("LRATBUILDER clause with id %ld is now falsified", conflict->id);
+      LOG ("LRAT BUILDER inconsistent after adding %s clause and propagating", type);
+      LOG ("LRAT BUILDER clause with id %ld is now falsified", conflict->id);
       inconsistent = true;
       inconsistent_clause = conflict;
       assert (clause_falsified (conflict));
@@ -666,8 +690,8 @@ void LratBuilder::add_clause (const char * type) {
 
 void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
   START (checking);
-  LOG (c, "LRATBUILDER addition of original clause");
-  LOG ("LRATBUILDER clause id %ld", id);
+  LOG (c, "LRAT BUILDER addition of original clause");
+  LOG ("LRAT BUILDER clause id %ld", id);
   stats.added++;
   stats.original++;
   import_clause (c);
@@ -684,8 +708,8 @@ void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
 
 vector<uint64_t> LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> & c) {
   START (checking);
-  LOG (c, "LRATBUILDER addition of derived clause");
-  LOG ("LRATBUILDER clause id %ld", id);
+  LOG (c, "LRAT BUILDER addition of derived clause");
+  LOG ("LRAT BUILDER clause id %ld", id);
   stats.added++;
   stats.derived++;
   import_clause (c);
@@ -712,7 +736,7 @@ vector<uint64_t> LratBuilder::add_clause_get_proof (uint64_t id, const vector<in
 }
 
 void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
-  LOG ("LRATBUILDER no proof requested, treating clause as original");
+  LOG ("LRAT BUILDER no proof requested, treating clause as original");
   add_original_clause (id, c);
 }
 
@@ -720,8 +744,8 @@ void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
 
 void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
   START (checking);
-  LOG (c, "LRATBUILDER checking deletion of clause");
-  LOG ("LRATBUILDER clause id %ld", id);
+  LOG (c, "LRAT BUILDER checking deletion of clause");
+  LOG ("LRAT BUILDER clause id %ld", id);
   stats.deleted++;
   import_clause (c);
   last_id = id;
@@ -735,10 +759,10 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
       int lit = *(dp + i);
       assert (mark (lit));
       LratBuilderClause * reason = reasons[l2a (lit)];
-      if (!val (lit)) LOG ("LRATBUILDER skipping lit %d not assigned", lit);
-      else LOG ("LRATBUILDER lit %d reason id %ld", lit, reason->id);
+      if (!val (lit)) LOG ("LRAT BUILDER skipping lit %d not assigned", lit);
+      else LOG ("LRAT BUILDER lit %d reason id %ld", lit, reason->id);
       if (reason == d) {
-        LOG ("LRATBUILDER reason matches, unassigning lit %d", lit);
+        LOG ("LRAT BUILDER reason matches, unassigning lit %d", lit);
         assert (val (lit));
         assert (!unit);
         unit = lit;
@@ -756,7 +780,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
     d->garbage = true;
 
     if (unit) {
-      LOG (trail.begin (), trail.end (), "LRATBUILDER propagated lits before deletion");
+      LOG (trail.begin (), trail.end (), "LRAT BUILDER propagated lits before deletion");
       while (trail.size ()) {      // backtracking in trail until we hit
         int tlit = trail.back ();  // the right lit.
         if (tlit == unit) break;    // this is needed to make sure the
@@ -770,7 +794,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
     if (unit || (inconsistent && inconsistent_clause->id == d->id)) {
       next_to_propagate = 0;
       bool res = propagate ();
-      LOG (trail.begin (), trail.end (), "LRATBUILDER propagated lits after deletion");
+      LOG (trail.begin (), trail.end (), "LRAT BUILDER propagated lits after deletion");
       assert (res || inconsistent);
       if (!res) {
         inconsistent = true;
@@ -778,7 +802,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
       } else if (inconsistent) {
         inconsistent = false;
         inconsistent_clause = 0;
-        LOG ("LRATBUILDER no longer inconsistent after deletion of clause %ld", d->id);
+        LOG ("LRAT BUILDER no longer inconsistent after deletion of clause %ld", d->id);
       }
     }
     
