@@ -84,7 +84,7 @@ class LratBuilder : public Observer {
   vector<signed char> checked_lits;
   LratBuilderClause * conflict;
 
-  vector<uint64_t> valid_proof_chain;
+  vector<uint64_t> chain;
   
   bool new_clause_taut;
   bool inconsistent;            // found or added empty clause
@@ -105,7 +105,7 @@ class LratBuilder : public Observer {
   void enlarge_vars (int64_t idx);
   void import_literal (int lit);
   void import_clause (const vector<int> &);
-  bool tautological ();
+  void tautological ();
   LratBuilderClause * assumption;
   LratBuilderClause * inconsistent_clause;
   vector<LratBuilderClause *> unit_clauses;          // we need this because propagate
@@ -130,8 +130,6 @@ class LratBuilder : public Observer {
   void collect_garbage_clauses ();
 
   LratBuilderClause * new_clause ();
-  LratBuilderClause * new_unit_clause ();
-  LratBuilderClause * new_empty_clause ();
   void delete_clause (LratBuilderClause *);
 
   signed char val (int lit);            // returns '-1', '0' or '1'
@@ -141,16 +139,24 @@ class LratBuilder : public Observer {
 
   void assign (int lit);        // assign a literal to true
   void assign_reason (int lit, LratBuilderClause * reason_clause);
-  bool unit_propagate ();
   void unassign_reason (int lit); 
   void assume (int lit);        // assume a literal
+
+  bool unit_propagate ();
   bool propagate ();            // propagate and check for conflicts
   void backtrack (unsigned);    // prepare for next clause
-  bool check ();                // check simplified clause is implied
-  bool check_lrat ();           // equivalent to check but uses
-  vector<uint64_t> build_lrat_proof (int);      // these two functions
-  bool check_lrat_proof (vector<uint64_t>);  // instead of simple propagation
-
+ 
+  // returns false if it fails to build a proof by calling one of the following
+  bool build_chain_if_possible ();
+  // if the clause is a true tautology it is its own proof
+  void proof_taut ();
+  // normal proof building
+  void proof_clause ();
+  // for satisfied clauses we only need to prove the satisfied lit
+  void proof_lit (int lit);
+  // if the state is already inconsistent we can add any clause by proving the inconsistent clause
+  void proof_inconsistent ();
+  
   struct {
 
     int64_t added;              // number of added clauses

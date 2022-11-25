@@ -46,36 +46,6 @@ inline LratBuilderWatcher & LratBuilder::watcher (int lit) {
 }
 
 /*------------------------------------------------------------------------*/
-LratBuilderClause * LratBuilder::new_empty_clause () {
-  const size_t size = simplified.size ();
-  assert (!size);
-  const size_t bytes = sizeof (LratBuilderClause);
-  LratBuilderClause * res = (LratBuilderClause *) new char [bytes];
-  res->garbage = false;
-  res->next = 0;
-  res->hash = last_hash;
-  res->id = last_id;
-  res->size = size;
-  num_clauses++;
-  return res;
-}
-
-LratBuilderClause * LratBuilder::new_unit_clause () {
-  const size_t size = simplified.size ();
-  assert (size == 1);
-  const size_t bytes = sizeof (LratBuilderClause) + (size) * sizeof (int);
-  LratBuilderClause * res = (LratBuilderClause *) new char [bytes];
-  res->garbage = false;
-  res->next = 0;
-  res->hash = last_hash;
-  res->id = last_id;
-  res->size = size;
-  num_clauses++;
-  res->literals[0] = simplified[0];
-  unit_clauses.push_back (res);
-  return res;
-}
-
 LratBuilderClause * LratBuilder::new_clause () {
   const size_t size = simplified.size ();
   assert (size > 1), assert (size <= UINT_MAX);
@@ -86,12 +56,22 @@ LratBuilderClause * LratBuilder::new_clause () {
   res->hash = last_hash;
   res->id = last_id;
   res->size = size;
+  num_clauses++;
   int * literals = res->literals, * p = literals;
   for (const auto & lit : simplified)
     *p++ = lit;
-  num_clauses++;
+  
+  if (size == 0) {
+    return res;
+  }
+  if (size == 1) {
+    unit_clauses.push_back (res);
+    return res;
+  }
 
   // First two literals are used as watches and should not be false.
+  // or at least one should be true. But we can have falsified clauses
+  // then we cannot guarantee anything here.
   //
   for (unsigned i = 0; i < 2; i++) {
     int lit = literals[i];
@@ -103,10 +83,8 @@ LratBuilderClause * LratBuilder::new_clause () {
       break;
     }
   }
-  // assert (val (literals [0]) >= 0);
-  // assert (val (literals [1]) >= 0);
-  // we cannot assert this here since we can add falsified clauses.
-  // so we have to check for these cases in propagate
+  
+  // make sure the clause is not tautological
   if (!new_clause_taut) {
     watcher (literals[0]).push_back (LratBuilderWatch (literals[1], res));
     watcher (literals[1]).push_back (LratBuilderWatch (literals[0], res));
@@ -322,22 +300,18 @@ struct lit_smaller {
   }
 };
 
-bool LratBuilder::tautological () {
+void LratBuilder::tautological () {
   sort (simplified.begin (), simplified.end (), lit_smaller ());
   const auto end = simplified.end ();
   auto j = simplified.begin ();
   int prev = 0;
-  bool taut = false;
   for (auto i = j; i != end; i++) {
     int lit = *i;
     if (lit == prev) continue;          // duplicated literal
-    if (lit == -prev) { taut = true; new_clause_taut = true; }  // tautological clause
-    const signed char tmp = val (lit);
-    if (tmp > 0) taut = true;           // satisfied literal and clause
-    *j++ = prev = lit;
+    if (lit == -prev) { new_clause_taut = true; return; }  // tautological clause
+    *j++ = prev = lit;                                     // which means we don't care
   }
   simplified.resize (j - simplified.begin ());
-  return taut;
 }
 
 /*------------------------------------------------------------------------*/
@@ -381,9 +355,7 @@ LratBuilderClause * LratBuilder::insert () {
   if (num_clauses == size_clauses) enlarge_clauses ();
   const uint64_t h = reduce_hash (compute_hash (last_id), size_clauses);
   LratBuilderClause * c;
-  if (!simplified.size ()) c = new_empty_clause ();
-  else if (simplified.size () == 1) c = new_unit_clause ();
-  else c = new_clause ();
+  c = new_clause ();
   c->next = clauses[h];
   clauses[h] = c;
   return c;
@@ -530,22 +502,27 @@ bool LratBuilder::propagate () {
   }
   return res;
 }
+void LratBuilder::proof_taut () {
+  LOG (simplified, "LRATBUILDER tautological clause proves itself: ");
+  chain.push_back (last_id);
+}
 
-vector<uint64_t> LratBuilder::build_lrat_proof (int unit) {
+void LratBuilder::proof_lit (int lit) {
+  LOG ("LRATBUILDER satisfied clause is proven by %d", lit);
+}
+void LratBuilder::proof_inconsistent () {
+  LOG ("LRATBUILDER inconsistent clause proves anything");
+}
+void LratBuilder::proof_clause () {
   LOG (simplified, "LRATBUILDER LRAT building proof for");
 
   vector<uint64_t> proof_chain;
   for (auto b : justified) b = false;
   for (auto b : todo_justify) b = false;
-  if (!unit) {
-    LOG ("LRATBUILDER LRAT skipping justified because we have inconsistent clause");
-  } else if (unit != INT_MIN) {
-    LOG ("LRATBUILDER LRAT only checking %d because new clause already satisfied", unit);
-    justified[l2a (unit)] = true;
-  } else {
-    for (const auto & lit : simplified) {
-      justified[l2a (lit)] = true;
-    }
+  
+  // marking clause as 
+  for (const auto & lit : simplified) {
+    justified[l2a (lit)] = true;
   }
   int counter = 0;
   for (int * i = conflict->literals; i < conflict->literals + conflict->size; i++) {
@@ -591,112 +568,46 @@ vector<uint64_t> LratBuilder::build_lrat_proof (int unit) {
     }
   }
   assert (!counter);
-  vector<uint64_t> proof_chain_reverse;
   for (auto p = proof_chain.end () - 1; p >= proof_chain.begin (); p--)
-    proof_chain_reverse.push_back (*p);
-  return valid_proof_chain = proof_chain_reverse;
+    chain.push_back (*p);
 }
 
 
-bool LratBuilder::check_lrat () {
+bool LratBuilder::build_chain_if_possible () {
   stats.checks++;
+  
+  chain.clear ();
+
+  if (new_clause_taut) {
+    proof_taut ();
+    return true;
+  }
+
+  if (inconsistent) {
+    assert (inconsistent_clause);
+    proof_inconsistent ();
+    return true;
+  }
   unsigned previously_propagated = next_to_propagate;
   unsigned previous_trail_size = trail.size ();
-  
-  bool res = false;
-  conflict = 0;
-  int unit = 0;
-  if (inconsistent) {
-    assert(inconsistent_clause);
-    assert(!inconsistent_clause->garbage);
-    assert(clause_falsified (inconsistent_clause));
-    LOG ("LRATBUILDER added clause in already inconsistent state");
-    LOG ("LRATBUILDER check inconsistent clause instead");
-    res = true;
-    conflict = inconsistent_clause;
-  }
-  else {
-    for (const auto & lit : simplified)
-    {
-      if (val (lit) > 0) {
-        res = true;
-        unit = lit;
-        conflict = reasons[l2a (lit)];
-        LOG ("LRATBUILDER LRAT check already satisfied clause");
-      } else if (!val (lit)) {
-        assume (-lit);
-      }
+
+  for (const auto & lit : simplified)
+  {
+    if (val (lit) > 0) {
+      proof_lit (lit);
+      return true;
+    } else if (!val (lit)) {
+      assume (-lit);
     }
   }
-  if (!res) { res = !propagate (); unit = INT_MIN; }
-  LOG (trail.begin (), trail.end (), "LRATBUILDER TODO");
-  assert(res && conflict);
-  vector<uint64_t> proof = build_lrat_proof (unit);
+  if (propagate ()) return false;
+  
+  proof_clause ();
+
   backtrack (previous_trail_size);
   next_to_propagate = previously_propagated;
 
-  // we backtrack first and then check to emphazise that checking should not
-  // be  dependent on the internal state
-  return check_lrat_proof (proof);
-}
-
-
-bool LratBuilder::check_lrat_proof (vector<uint64_t> proof_chain) {
-  LOG (simplified, "LRATBUILDER LRAT checking clause");
-
-  assert (proof_chain.size ());
-  for (auto & b : checked_lits) b = false;        // empty the vector
-  for (const auto & lit : simplified) {          // initialize -lit=true for
-    checked_lit (-lit) = true;                  // every lit in the learned clause
-  }
-  
-  for (auto &id : proof_chain) {
-    LratBuilderClause * c = * find (id);
-    if (!c)
-    {
-      LOG ("LRATBUILDER LRAT failed. Did not find clause with id %ld", id);
-      return false;
-    }
-    if (!c->size) {
-      LOG ("LRATBUILDER LRAT proof contains unnecessary empty clause %ld", id);
-      continue;
-    }
-    int unit = 0;
-    for (int * i = c->literals; i < c->literals + c->size; i++) {
-      int lit = * i;
-      if (checked_lit (-lit)) continue;     // TODO:
-      // assert (!checked_lit (lit));       // we dont want satisfied clauses in our proof
-                                            // points to bug in proof building
-                                            // i.e. clauses appearing multiple times
-      if (unit) { unit = INT_MIN; break; }  // multiple unfalsified literals
-      unit = lit;                           // potential unit
-    }
-    if (unit == INT_MIN) {
-      LOG ("LRATBUILDER check failed, found non unit clause %ld", id);
-      return false;
-    }
-    if (!unit) {
-      LOG ("LRATBUILDER check succeded, clause falsified %ld", id);  // TODO:
-      // assert (proof_chain.back () == id);   // we dont want unnecessary long proofs
-      break;                                   // would also be regarded as bug here
-    }
-    LOG ("LRATBUILDER found unit clause %ld, assign %d", id, unit);
-    checked_lit (unit) = true;
-  }
   return true;
-}
-
-bool LratBuilder::check () {
-  stats.checks++;
-  if (inconsistent) return true;
-  unsigned previously_propagated = next_to_propagate;
-  for (const auto & lit : simplified)
-  {
-    assume (-lit);
-  }
-  bool res = !propagate ();
-  backtrack (previously_propagated);
-  return res;
 }
 
 /*------------------------------------------------------------------------*/
@@ -707,6 +618,10 @@ void LratBuilder::add_clause (const char * type) {
 #endif
 
   LratBuilderClause * c = insert ();
+  if (inconsistent) {
+    LOG ("LRATBUILDER state already inconsistent so nothing more to do");
+    return;
+  }
 
   const unsigned size = c->size;
   bool sat = clause_satisfied (c);
@@ -720,23 +635,18 @@ void LratBuilder::add_clause (const char * type) {
         unit = lit;
       }
     }
-  }                             // TODO: after inconsistent state, proof_chain
-                                // can be calculated wrong  
+  }
   if (!size) {
     LOG ("LRATBUILDER added and checked empty %s clause", type);
     LOG ("LRATBUILDER clause with id %ld is now falsified", c->id);
-    if (!inconsistent) {
-      inconsistent = true;
-      inconsistent_clause = c;
-    }
+    inconsistent = true;
+    inconsistent_clause = c;
   } else if (sat) {
     LOG ("LRATBUILDER added and checked satisfied %s clause", type);
   } else if (!unit) {
     LOG ("LRATBUILDER added and checked falsified %s clause with id %ld", type, c->id);    
-    if (!inconsistent) {
-      inconsistent = true;
-      inconsistent_clause = c;
-    }
+    inconsistent = true;
+    inconsistent_clause = c;
   } else if (unit == INT_MIN) {
     LOG ("LRATBUILDER added and checked non unit %s clause", type);    
   } else {
@@ -773,11 +683,6 @@ void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
 }
 
 vector<uint64_t> LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> & c) {
-  add_derived_clause (id, c);
-  return valid_proof_chain;
-}
-
-void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRATBUILDER addition of derived clause");
   LOG ("LRATBUILDER clause id %ld", id);
@@ -788,11 +693,11 @@ void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
   assert (id);
   assert (!new_clause_taut);
   tautological ();
-  bool res = new_clause_taut;
-  if (!res) res = check_lrat ();
-  if (!res) {                   // proof but not checked
+
+  bool res = build_chain_if_possible ();
+  if (!res) {
     fatal_message_start ();
-    fputs ("failed to check derived clause:\n", stderr);
+    fputs ("failed to build chain for clause:\n", stderr);
     for (const auto & lit : unsimplified)
       fprintf (stderr, "%d ", lit);
     fputc ('0', stderr);
@@ -803,6 +708,12 @@ void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
   unsimplified.clear ();
   new_clause_taut = false;
   STOP (checking);
+  return chain;
+}
+
+void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
+  LOG ("LRATBUILDER no proof requested, treating clause as original");
+  add_original_clause (id, c);
 }
 
 /*------------------------------------------------------------------------*/
@@ -869,12 +780,6 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
         inconsistent_clause = 0;
         LOG ("LRATBUILDER no longer inconsistent after deletion of clause %ld", d->id);
       }
-    }
-    if (inconsistent) {
-      LOG ("LRATBUILDER new inconsistent clause id %ld, deleted id %ld", inconsistent_clause->id, d->id);
-      assert (inconsistent_clause);
-      assert (!inconsistent_clause->garbage);
-      assert (clause_falsified (inconsistent_clause));
     }
     
     // If there are enough garbage clauses collect them.
