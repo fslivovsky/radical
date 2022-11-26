@@ -548,7 +548,6 @@ void LratBuilder::help_proof () {
 
 void LratBuilder::proof_taut () {
   LOG (simplified, "LRAT BUILDER tautological clause proves itself: ");
-  chain.push_back (last_id);
 }
 
 void LratBuilder::proof_lit (int lit) {
@@ -559,7 +558,14 @@ void LratBuilder::proof_lit (int lit) {
 }
 
 void LratBuilder::proof_inconsistent () {
-  LOG ("LRAT BUILDER inconsistent clause proves anything");
+  LOG (inconsistent_clause, "LRAT BUILDER inconsistent clause proves anything, ");
+  if (inconsistent_chain.size ()) {
+    for (auto& id : inconsistent_chain) {
+      chain.push_back (id);
+    }
+    return;
+  }
+  
   unjustified = inconsistent_clause->size;   // is always > 0 if we have work to do
   const int* end = inconsistent_clause->literals + inconsistent_clause->size;
   for (int * i = inconsistent_clause->literals; i < end; i++) {
@@ -568,6 +574,9 @@ void LratBuilder::proof_inconsistent () {
   }
   reverse_chain.push_back (inconsistent_clause->id);
   help_proof ();
+  for (auto& id : chain) {
+    inconsistent_chain.push_back (id);
+  }
 }
 
 void LratBuilder::proof_clause () {
@@ -792,6 +801,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
       trail.pop_back ();           // I missed some other solution.
     }
     if (unit || (inconsistent && inconsistent_clause->id == d->id)) {
+      inconsistent_chain.clear ();
       next_to_propagate = 0;
       bool res = propagate ();
       LOG (trail.begin (), trail.end (), "LRAT BUILDER propagated lits after deletion");

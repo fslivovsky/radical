@@ -94,6 +94,7 @@ void LratChecker::collect_garbage_clauses () {
   garbage = 0;
 }
 
+
 /*------------------------------------------------------------------------*/
 
 LratChecker::LratChecker (Internal * i)
@@ -207,12 +208,16 @@ void LratChecker::insert () {
 /*------------------------------------------------------------------------*/
 
 bool LratChecker::check (vector<uint64_t> proof_chain) {
-  LOG (imported_clause, "LRAT CHECKER LRAT checking clause");
+  LOG (imported_clause, "LRAT CHECKER checking clause");
   stats.checks++;
   assert (proof_chain.size ());
   for (auto & b : checked_lits) b = false;        // empty the vector
   for (const auto & lit : imported_clause) {     // initialize -lit=true for
     checked_lit (-lit) = true;                  // every lit in the learned clause
+    if (checked_lit (lit)) {
+      LOG (imported_clause, "LRAT CHECKER clause tautological");
+      return true;
+    }
   }
   
   for (auto &id : proof_chain) {
@@ -234,7 +239,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
                                             // we dont want satisfied clauses in our proof
                                             // points to bug in proof building
                                             // i.e. clauses appearing multiple times
-      if (unit) { unit = INT_MIN; break; }  // multiple unfalsified literals
+      if (unit && unit != lit) { unit = INT_MIN; break; }  // multiple unfalsified literals
       unit = lit;                           // potential unit
     }
     if (unit == INT_MIN) {
@@ -280,7 +285,6 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
   import_clause (c);
   last_id = id;
   assert (id);
-  insert ();
   if (!check (proof_chain)) {
     fatal_message_start ();                        
     fputs ("failed to check derived clause:\n", stderr);
@@ -289,6 +293,7 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
     fputc ('0', stderr);
     fatal_message_end ();
   }
+  else insert ();
   imported_clause.clear ();
   STOP (checking);
 }

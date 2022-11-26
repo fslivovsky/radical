@@ -86,6 +86,7 @@ class LratBuilder : public Observer {
 
   vector<uint64_t> chain;                  // lrat style proof chain
   vector<uint64_t> reverse_chain;          // what the name says
+  vector<uint64_t> inconsistent_chain;          // what the name says
   int unjustified;                         // number of lits we need to justify
   
   bool new_clause_taut;
