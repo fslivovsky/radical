@@ -22,17 +22,19 @@ void Internal::new_proof_on_demand () {
   }
 }
 
-// Enable proof tracing.  TODO: add lratbuilder to bottom of obververs
+// Enable proof tracing.
 
 void Internal::trace (File * file) {
   assert (!tracer);
   new_proof_on_demand ();
-  tracer = new Tracer (this, file, opts.binary, opts.checkprooflrat);
+  // both checkprooflrat and lrat have to be anabled for lrat proofs (at least
+  // at the moment
+  tracer = new Tracer (this, file, opts.binary, (opts.checkprooflrat && opts.lrat));
   LOG ("PROOF connecting proof tracer");
   proof->connect (tracer);
 }
 
-// Enable proof checking.  TODO: add lratbuilder to bottom of obververs
+// Enable proof checking.
 
 void Internal::check () {
   assert (!checker);
@@ -196,6 +198,9 @@ void Proof::add_original_clause () {
     observers[i]->add_original_clause (clause_id, clause);
   clause.clear ();
 }
+
+// notify observers of added clauses. if checkprooflrat is enabled, we want
+// to compute lrat proof first.
 
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
