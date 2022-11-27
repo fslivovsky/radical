@@ -135,6 +135,23 @@ void Tracer::delete_clause (uint64_t id, const vector<int> & clause) {
   deleted++;
 }
 
+
+void Tracer::finalize_clause (uint64_t id, const vector<int> & clause) {
+  if (!lrat) return;
+  if (file->closed ()) return;
+  LOG ("TRACER tracing finalization of clause");
+  if (binary) file->put ('f');
+  else file->put ("f ");
+  if (binary) put_binary_id (id);
+  else file->put ((int64_t) id), file->put ("  ");
+  for (const auto & external_lit : clause)
+    if (binary) put_binary_lit (external_lit);
+    else file->put (external_lit), file->put (' ');
+  if (binary) put_binary_zero ();
+  else file->put ("0\n");
+}
+
+
 /*------------------------------------------------------------------------*/
 
 bool Tracer::closed () { return file->closed (); }

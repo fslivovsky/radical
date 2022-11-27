@@ -833,6 +833,24 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
   new_clause_taut = false;
   STOP (checking);
 }
+/*------------------------------------------------------------------------*/
+
+
+// inelegant way to do this. TODO: do it better.
+void LratBuilder::finalize () {
+  if (!internal->tracer) return;
+  for (size_t i = 0; i < size_clauses; i++) {
+    for (LratBuilderClause * c = clauses[i], * next; c; c = next) {
+      next = c->next;
+      vector<int> clause;
+      const int * end = c->literals + c->size;
+      for (int* i = c->literals; i < end; i++) {
+        clause.push_back (*i);
+      }
+      internal->tracer->finalize_clause (c->id, clause);
+    }
+  }
+}
 
 /*------------------------------------------------------------------------*/
 

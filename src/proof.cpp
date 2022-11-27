@@ -228,6 +228,9 @@ void Proof::delete_clause () {
 
 void Proof::finalize () {
   if (!lrat) return;
+  if (!internal->tracer) return;
+  assert (internal->lratbuilder);
+  internal->lratbuilder->finalize ();
 }
 
 }

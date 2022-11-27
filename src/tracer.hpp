@@ -32,6 +32,7 @@ public:
   vector<uint64_t> add_clause_get_proof (uint64_t, const vector<int> &) {
     vector<uint64_t> a; assert (false); return a;  // should not be called
   }
+  void finalize_clause (uint64_t, const vector<int> &);
 
   bool closed ();
   void close ();

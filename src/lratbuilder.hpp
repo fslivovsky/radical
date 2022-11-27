@@ -200,6 +200,7 @@ public:
   void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) {
     assert(false);
   }
+  void finalize ();          // inelegant :/
 
   void print_stats ();
   void dump ();                 // for debugging purposes only
