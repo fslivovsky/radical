@@ -226,4 +226,8 @@ void Proof::delete_clause () {
   clause.clear ();
 }
 
+void Proof::finalize () {
+  if (!lrat) return;
+}
+
 }

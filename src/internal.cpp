@@ -688,6 +688,14 @@ int Internal::lookahead () {
 
 /*------------------------------------------------------------------------*/
 
+void Internal::finalize () {
+  if (!proof || !opts.lrat || !opts.checkprooflrat) return;
+  LOG ("finalizing");
+  proof->finalize ();
+}
+
+/*------------------------------------------------------------------------*/
+
 void Internal::print_statistics () {
   stats.print (this);
   if (checker) checker->print_stats ();

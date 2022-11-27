@@ -53,6 +53,8 @@ public:
 
   void delete_clause (uint64_t, const vector<int> &);
   void delete_clause (Clause *);
+  
+  void finalize ();
 
   // These two actually pretend to add and remove a clause.
   //

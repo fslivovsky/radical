@@ -233,7 +233,10 @@ void External::check_unsatisfiable () {
 void External::check_solve_result (int res) {
   if (!internal->opts.check) return;
   if (res == 10) check_satisfiable ();
-  if (res == 20) check_unsatisfiable ();
+  if (res == 20) {
+    check_unsatisfiable ();
+    internal->finalize ();
+  }
 }
 
 // Prepare checking that completely molten literals are not used as argument
