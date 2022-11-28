@@ -558,7 +558,7 @@ void LratBuilder::proof_lit (int lit) {
 }
 
 void LratBuilder::proof_inconsistent () {
-  LOG (inconsistent_clause, "LRAT BUILDER inconsistent clause proves anything, ");
+  LOG ("LRAT BUILDER inconsistent clause proves anything");
   if (inconsistent_chain.size ()) {
     for (auto& id : inconsistent_chain) {
       chain.push_back (id);
