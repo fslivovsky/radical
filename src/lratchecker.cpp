@@ -210,7 +210,7 @@ void LratChecker::insert () {
 bool LratChecker::check (vector<uint64_t> proof_chain) {
   LOG (imported_clause, "LRAT CHECKER checking clause");
   stats.checks++;
-  assert (proof_chain.size ());
+  // assert (proof_chain.size ());      // fails for tautological clauses.
   for (auto & b : checked_lits) b = false;        // empty the vector
   for (const auto & lit : imported_clause) {     // initialize -lit=true for
     checked_lit (-lit) = true;                  // every lit in the learned clause
