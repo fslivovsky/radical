@@ -79,6 +79,7 @@ class LratBuilder : public Observer {
   // access by abs(lit)
   static unsigned l2a (int lit);
   vector<LratBuilderClause *> reasons;     // store reason for each assignment
+  vector<LratBuilderClause *> unit_reasons;     // store reason for each assignment
   vector<bool> justified;              // probably better as array ??
   vector<bool> todo_justify;
   vector<signed char> checked_lits;

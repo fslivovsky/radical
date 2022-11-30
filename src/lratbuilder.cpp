@@ -260,11 +260,13 @@ void LratBuilder::enlarge_vars (int64_t idx) {
   vals = new_vals;
   
   reasons.resize (new_size_vars);
+  unit_reasons.resize (new_size_vars);
   justified.resize (new_size_vars);
   todo_justify.resize (new_size_vars);
   for (int64_t i = size_vars; i < new_size_vars; i++)
   {
     reasons[i] = 0;
+    unit_reasons[i] = 0;
     justified[i] = 0;
     todo_justify[i] = 0;
   }
@@ -519,7 +521,8 @@ void LratBuilder::help_proof () {
     justified [l2a (lit)] = true;
     LOG ("LRAT BUILDER justify lit %d", lit);
     unjustified--;         // one of the todo_justify lits justified
-    LratBuilderClause * reason_clause = reasons[l2a (lit)];
+    LratBuilderClause * reason_clause = unit_reasons[l2a (lit)];
+    if (!reason_clause) reason_clause = reasons[l2a (lit)];
     assert (reason_clause);
     assert (!reason_clause->garbage);
     reverse_chain.push_back (reason_clause->id);
@@ -669,6 +672,10 @@ void LratBuilder::add_clause (const char * type) {
       }
     }
   }
+  if (size == 1) {
+    if (!val (c->literals[0]))
+      unit_reasons[l2a (c->literals[0])] = c;
+  }
   if (!size) {
     LOG ("LRAT BUILDER added and checked empty %s clause", type);
     LOG ("LRAT BUILDER clause with id %ld is now falsified", c->id);
@@ -787,6 +794,13 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
     d->next = garbage;
     garbage = d;
     d->garbage = true;
+    
+    if (d->size == 1) {
+      unsigned l = l2a (d->literals[0]);
+      if (unit_reasons[l] == d) {
+        unit_reasons[l] = 0;
+      }
+    }
 
     if (unit) {
       LOG (trail.begin (), trail.end (), "LRAT BUILDER propagated lits before deletion");

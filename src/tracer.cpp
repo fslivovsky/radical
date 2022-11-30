@@ -66,7 +66,7 @@ void Tracer::add_original_clause (uint64_t id, const vector<int> & clause) {
   if (binary) file->put ('o');
   else file->put ("o ");
   if (binary) put_binary_id (id);
-  else file->put ((int64_t) id), file->put ("  ");
+  else file->put (id), file->put ("  ");
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
     else file->put (external_lit), file->put (' ');
@@ -82,7 +82,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {
   else if (lrat) file->put ("a ");
   if (lrat) {
     if (binary) put_binary_id (id);
-    else file->put ((int64_t) id), file->put ("  ");
+    else file->put (id), file->put ("  ");
   }
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
@@ -93,7 +93,6 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {
 }
 
 
-// TODO: actually output LRAT / FRAT / binary if the setting is set.
 void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const vector<uint64_t> & chain) {
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of derived clause with proof chain");
@@ -101,7 +100,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const 
   else if (lrat) file->put ("a ");
   if (lrat) {
     if (binary) put_binary_id (id);
-    else file->put ((int64_t) id), file->put ("  ");
+    else file->put (id), file->put ("  ");
   }
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
@@ -125,7 +124,7 @@ void Tracer::delete_clause (uint64_t id, const vector<int> & clause) {
   else file->put ("d ");
   if (lrat) {
     if (binary) put_binary_id (id);
-    else file->put ((int64_t) id), file->put ("  ");
+    else file->put (id), file->put ("  ");
   }
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
@@ -143,7 +142,7 @@ void Tracer::finalize_clause (uint64_t id, const vector<int> & clause) {
   if (binary) file->put ('f');
   else file->put ("f ");
   if (binary) put_binary_id (id);
-  else file->put ((int64_t) id), file->put ("  ");
+  else file->put (id), file->put ("  ");
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
     else file->put (external_lit), file->put (' ');
