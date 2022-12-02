@@ -43,17 +43,25 @@ inline void Tracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-// TODO: is this correct?
+// TODO: binary FRAT doesn't work anyways!!!
+// why bother :/
+// fradical works with their tool.
+// the problem seem to be the finalize steps. I have them in arbitrary
+// order (from the hash-table in lratbuilder) but fradical has them somewhat
+// ordered (first empty then units then everything else in ascending order)
+// this might actually be what breaks frat-rs (not my fault as far as I can tell)
+
 inline void Tracer::put_binary_id (uint64_t id) {
   assert (binary);
   assert (file);
+  uint64_t x = id + 1;
   unsigned char ch;
-  while (id & ~0x7f) {
-    ch = (id & 0x7f) | 0x80;
+  while (x & ~0x7f) {
+    ch = (x & 0x7f) | 0x80;
     file->put (ch);
-    id >>= 7;
+    x >>= 7;
   }
-  ch = id;
+  ch = x;
   file->put (ch);
 }
 
@@ -61,8 +69,8 @@ inline void Tracer::put_binary_id (uint64_t id) {
 
 void Tracer::add_original_clause (uint64_t id, const vector<int> & clause) { 
   if (file->closed ()) return;
-  LOG ("TRACER tracing addition of original clause");
   if (!lrat) return;
+  LOG ("TRACER tracing addition of original clause");
   if (binary) file->put ('o');
   else file->put ("o ");
   if (binary) put_binary_id (id);
@@ -74,7 +82,7 @@ void Tracer::add_original_clause (uint64_t id, const vector<int> & clause) {
   else file->put ("0\n");
 }
 
-  
+
 void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {
   if (file->closed ()) return;
   LOG ("TRACER tracing addition of derived clause");
@@ -110,7 +118,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const 
     else file->put ("0  l ");
     for (const auto & c : chain)
       if (binary) put_binary_id (c);
-      else file->put ((int64_t) c), file->put (' ');
+      else file->put (c), file->put (' ');
   }
   if (binary) put_binary_zero ();
   else file->put ("0\n");
@@ -133,7 +141,6 @@ void Tracer::delete_clause (uint64_t id, const vector<int> & clause) {
   else file->put ("0\n");
   deleted++;
 }
-
 
 void Tracer::finalize_clause (uint64_t id, const vector<int> & clause) {
   if (!lrat) return;
