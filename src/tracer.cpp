@@ -117,10 +117,10 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const 
     if (binary) put_binary_zero (), file->put ('l');
     else file->put ("0  l ");
     for (const auto & c : chain)
-      if (binary) put_binary_id (2*c);
-      else file->put (c), file->put (' ');
-  }
-  if (binary) put_binary_zero ();
+      if (binary) put_binary_id (2*c);                  // because this is lrat
+      else file->put (c), file->put (' ');              // we can have negative ids.
+  }                                                     // so we need 2*c (cadical
+  if (binary) put_binary_zero ();                       // has only rup steps)
   else file->put ("0\n");
   added++;
 }

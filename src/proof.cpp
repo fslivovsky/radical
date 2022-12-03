@@ -67,7 +67,8 @@ void Internal::flush_trace () {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal * s, bool l) : internal (s), lrat (l) { LOG ("PROOF new"); }
+Proof::Proof (Internal * s, bool l) : internal (s), lrat (l), checker (0),
+  tracer (0), lratbuilder (0), lratchecker (0) { LOG ("PROOF new"); }
 
 Proof::~Proof () { LOG ("PROOF delete"); }
 
@@ -194,26 +195,41 @@ void Proof::strengthen_clause (Clause * c, int remove) {
 void Proof::add_original_clause () {
   LOG (clause, "PROOF adding original external clause");
   assert (clause_id);
-  for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_original_clause (clause_id, clause);
+
+  if (lratbuilder)
+    lratbuilder->add_original_clause (clause_id, clause);
+  if (lratchecker)
+    lratchecker->add_original_clause (clause_id, clause);
+  if (checker)
+    checker->add_original_clause (clause_id, clause);
+  if (tracer)
+    tracer->add_original_clause (clause_id, clause);
   clause.clear ();
 }
 
-// notify observers of added clauses. if checkprooflrat is enabled, we want
-// to compute lrat proof first.
 
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
   assert (clause_id);
   if (lrat) {
-    assert (!observers.empty ());
-    proof_chain = observers[0]->add_clause_get_proof (clause_id, clause);
-    for (size_t i = 1; i < observers.size (); i++)
-      observers[i]->add_derived_clause (clause_id, clause, proof_chain);
+    assert (lratbuilder);
+    proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
+    if (lratchecker)
+      lratchecker->add_derived_clause (clause_id, clause, proof_chain);
+    if (checker)
+      checker->add_derived_clause (clause_id, clause);
+    if (tracer)
+      tracer->add_derived_clause (clause_id, clause, proof_chain);
   }
   else {
-    for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->add_derived_clause (clause_id, clause);
+    if (lratbuilder)
+      lratbuilder->add_derived_clause (clause_id, clause);
+    if (lratchecker)
+      lratchecker->add_derived_clause (clause_id, clause);
+    if (checker)
+      checker->add_derived_clause (clause_id, clause);
+    if (tracer)
+      tracer->add_derived_clause (clause_id, clause);
   }
   proof_chain.clear ();
   clause.clear ();
@@ -221,16 +237,22 @@ void Proof::add_derived_clause () {
 
 void Proof::delete_clause () {
   LOG (clause, "PROOF deleting external clause");
-  for (size_t i = 0; i < observers.size (); i++)
-    observers[i]->delete_clause (clause_id, clause);
+  if (lratbuilder)
+    lratbuilder->delete_clause (clause_id, clause);
+  if (lratchecker)
+    lratchecker->delete_clause (clause_id, clause);
+  if (checker)
+    checker->delete_clause (clause_id, clause);
+  if (tracer)
+    tracer->delete_clause (clause_id, clause);
   clause.clear ();
 }
 
 void Proof::finalize () {
   if (!lrat) return;
-  if (!internal->tracer) return;
-  assert (internal->lratbuilder);
-  internal->lratbuilder->finalize ();
+  if (!tracer) return;
+  assert (lratbuilder);
+  lratbuilder->finalize ();
 }
 
 }

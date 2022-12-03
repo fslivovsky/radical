@@ -70,7 +70,6 @@ extern "C" {
 #include "lratbuilder.hpp"
 #include "lratchecker.hpp"
 #include "message.hpp"
-#include "observer.hpp"
 #include "occs.hpp"
 #include "options.hpp"
 #include "parse.hpp"

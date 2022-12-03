@@ -1,8 +1,6 @@
 #ifndef _lratbuilder_hpp_INCLUDED
 #define _lratbuilder_hpp_INCLUDED
 
-#include "observer.hpp"         // Alphabetically after 'lratbuilder'.
-
 /*------------------------------------------------------------------------*/
 
 namespace CaDiCaL {
@@ -50,7 +48,7 @@ typedef vector<LratBuilderWatch> LratBuilderWatcher;
 
 /*------------------------------------------------------------------------*/
 
-class LratBuilder : public Observer {
+class LratBuilder {
 
   Internal * internal;
 
@@ -190,17 +188,11 @@ public:
   LratBuilder (Internal *);
   ~LratBuilder ();
 
-  // The following three implement the 'Observer' interface.
-  //
   void add_original_clause (uint64_t, const vector<int> &);
   void add_derived_clause (uint64_t, const vector<int> &);
   void delete_clause (uint64_t, const vector<int> &);
   vector<uint64_t> add_clause_get_proof (uint64_t, const vector<int> &);
   
-  // should not be called
-  void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t> &) {
-    assert(false);
-  }
   void finalize ();          // inelegant :/
 
   void print_stats ();

@@ -8,11 +8,14 @@ namespace CaDiCaL {
 class File;
 struct Clause;
 struct Internal;
-class Observer;
+class Checker;
+class Tracer;
+class LratBuilder;
+class LratChecker;
 
 /*------------------------------------------------------------------------*/
 
-// Provides proof checking and writing through observers.
+// Provides proof checking and writing.
 
 class Proof {
 
@@ -21,8 +24,13 @@ class Proof {
   vector<int> clause;           // of external literals
   vector<uint64_t> proof_chain;   // lrat style proof chain of clause
   uint64_t clause_id;            // id of added clause
-  vector<Observer *> observers; // owned, so deleted in destructor
+  
+  
   bool lrat;
+  Checker * checker;
+  Tracer * tracer;
+  LratBuilder * lratbuilder;
+  LratChecker * lratchecker;
 
   void add_literal (int internal_lit);  // add to 'clause'
   void add_literals (Clause *);         // add to 'clause'
@@ -38,8 +46,11 @@ public:
   Proof (Internal *, bool);
   ~Proof ();
 
-  void connect (Observer * v) { observers.push_back (v); }
-
+  void connect (Tracer * t) { tracer = t; }
+  void connect (LratBuilder * lb) { lratbuilder = lb; }
+  void connect (LratChecker * lc) { lratchecker = lc; }
+  void connect (Checker * c) { checker = c; }
+  
   // Add original clauses to the proof (for online proof checking).
   //
   void add_original_clause (uint64_t, const vector<int> &);
