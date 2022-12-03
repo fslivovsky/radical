@@ -54,7 +54,7 @@ inline void Tracer::put_binary_lit (int lit) {
 inline void Tracer::put_binary_id (uint64_t id) {
   assert (binary);
   assert (file);
-  uint64_t x = id + 1;
+  uint64_t x = id;
   unsigned char ch;
   while (x & ~0x7f) {
     ch = (x & 0x7f) | 0x80;
@@ -117,7 +117,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const 
     if (binary) put_binary_zero (), file->put ('l');
     else file->put ("0  l ");
     for (const auto & c : chain)
-      if (binary) put_binary_id (c);
+      if (binary) put_binary_id (2*c);
       else file->put (c), file->put (' ');
   }
   if (binary) put_binary_zero ();
