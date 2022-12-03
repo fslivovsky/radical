@@ -43,13 +43,8 @@ inline void Tracer::put_binary_lit (int lit) {
   file->put (ch);
 }
 
-// TODO: binary FRAT doesn't work anyways!!!
-// why bother :/
-// fradical works with their tool.
-// the problem seem to be the finalize steps. I have them in arbitrary
-// order (from the hash-table in lratbuilder) but fradical has them somewhat
-// ordered (first empty then units then everything else in ascending order)
-// this might actually be what breaks frat-rs (not my fault as far as I can tell)
+// Support for binary FRAT (TODO: maybe merge with function above
+// because this is copy pasta)
 
 inline void Tracer::put_binary_id (uint64_t id) {
   assert (binary);
@@ -117,11 +112,11 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const 
     if (binary) put_binary_zero (), file->put ('l');
     else file->put ("0  l ");
     for (const auto & c : chain)
-      if (binary) put_binary_id (2*c);                  // because this is lrat
-      else file->put (c), file->put (' ');              // we can have negative ids.
-  }                                                     // so we need 2*c (cadical
-  if (binary) put_binary_zero ();                       // has only rup steps)
-  else file->put ("0\n");
+      if (binary) put_binary_id (2*c);        // lrat can have negative ids
+      else file->put (c), file->put (' ');    // in proof chain, so they get
+  }                                           // represented by 2*|id|+(id<0)
+  if (binary) put_binary_zero ();             // since cadical has no rat-steps
+  else file->put ("0\n");                     // this is just 2c here 
   added++;
 }
 

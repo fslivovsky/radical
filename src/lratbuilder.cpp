@@ -505,7 +505,7 @@ bool LratBuilder::propagate () {
   return res;
 }
 
-void LratBuilder::help_proof () {
+void LratBuilder::construct_chain () {
   LOG ("LRAT BUILDER checking lits on trail in reverse order");
   for (auto p = trail.end () - 1; unjustified && p >= trail.begin (); p--) {
     int lit = *p;
@@ -549,18 +549,18 @@ void LratBuilder::help_proof () {
   }
 }
 
-void LratBuilder::proof_taut () {
-  LOG (simplified, "LRAT BUILDER tautological clause proves itself: ");
+void LratBuilder::proof_tautological_clause () {
+  LOG (simplified, "LRAT BUILDER tautological clause needs no proof: ");
 }
 
-void LratBuilder::proof_lit (int lit) {
+void LratBuilder::proof_satisfied_literal (int lit) {
   LOG ("LRAT BUILDER satisfied clause is proven by %d", lit);
   unjustified = 1;   // is always > 0 if we have work to do
   todo_justify[l2a (lit)] = true;
-  help_proof ();
+  construct_chain ();
 }
 
-void LratBuilder::proof_inconsistent () {
+void LratBuilder::proof_inconsistent_clause () {
   LOG ("LRAT BUILDER inconsistent clause proves anything");
   if (inconsistent_chain.size ()) {
     for (auto& id : inconsistent_chain) {
@@ -576,7 +576,7 @@ void LratBuilder::proof_inconsistent () {
     todo_justify[l2a (lit)] = true;
   }
   reverse_chain.push_back (inconsistent_clause->id);
-  help_proof ();
+  construct_chain ();
   for (auto& id : chain) {
     inconsistent_chain.push_back (id);
   }
@@ -595,7 +595,7 @@ void LratBuilder::proof_clause () {
     todo_justify[l2a (lit)] = true;
   }
   reverse_chain.push_back (conflict->id);
-  help_proof ();
+  construct_chain ();
 }
 
 
@@ -605,7 +605,7 @@ bool LratBuilder::build_chain_if_possible () {
   chain.clear ();
 
   if (new_clause_taut) {
-    proof_taut ();
+    proof_tautological_clause ();
     return true;
   }
 
@@ -615,7 +615,7 @@ bool LratBuilder::build_chain_if_possible () {
 
   if (inconsistent) {
     assert (inconsistent_clause);
-    proof_inconsistent ();
+    proof_inconsistent_clause ();
     return true;
   }
   unsigned previously_propagated = next_to_propagate;
@@ -626,7 +626,7 @@ bool LratBuilder::build_chain_if_possible () {
     if (val (lit) > 0) {
       backtrack (previous_trail_size);
       next_to_propagate = previously_propagated;
-      proof_lit (lit);
+      proof_satisfied_literal (lit);
       return true;
     } else if (!val (lit)) {
       assume (-lit);

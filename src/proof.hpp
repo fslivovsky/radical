@@ -27,10 +27,12 @@ class Proof {
   
   
   bool lrat;
-  Checker * checker;
-  Tracer * tracer;
-  LratBuilder * lratbuilder;
-  LratChecker * lratchecker;
+  
+  // the 'observers'
+  Checker * checker;                    // drat checker with unit propagation
+  Tracer * tracer;                      // trace proof to file
+  LratBuilder * lratbuilder;            // create lrat proof chain for any clause
+  LratChecker * lratchecker;            // lrat checker
 
   void add_literal (int internal_lit);  // add to 'clause'
   void add_literals (Clause *);         // add to 'clause'

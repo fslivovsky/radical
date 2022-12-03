@@ -7,31 +7,23 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// This checker implements an online forward DRUP proof checker enabled by
-// 'opts.checkproof' (requires 'opts.check' also to be enabled).  This is
-// useful for model based testing (and delta-debugging), where we can not
-// rely on an external proof checker such as 'drat-trim'.  We also do not
-// have yet  a flow for offline incremental proof checking, while this
-// checker here can also be used in an incremental setting.
-//
-// In essence the checker implements is a simple propagation online SAT
-// solver with an additional hash table to find clauses fast for
-// 'delete_clause'.  It requires its own data structure for clauses
-// ('LratBuilderClause') and watches ('LratBuilderWatch').
-//
-// In our experiments the checker slows down overall SAT solving time by a
-// factor of 3, which we contribute to its slightly less efficient
-// implementation.
+// This constructs lrat-style proof chains. Enabled by 'opts.checkprooflrat'
+// (requires 'opts.check' and 'opts.checkproof'). The main advantage of this
+// currently is that we can stream out frat proofs (enabled by 'opts.lrat')
+
+// in essence this implements the same propagation routine as the DRUP checker
+// but also stores the reason for each assignment. The proof chain is then
+// recreated from that.
 
 /*------------------------------------------------------------------------*/
 
 struct LratBuilderClause {
-  LratBuilderClause * next;         // collision chain link for hash table
+  LratBuilderClause * next;     // collision chain link for hash table
   uint64_t hash;                // previously computed full 64-bit hash
-  uint64_t id;                   // id of clause
+  uint64_t id;                  // id of clause
   bool garbage;                 // for garbage clauses
   unsigned size;
-  int literals[0];              // otherwise 'literals' of length 'size'
+  int literals[0];              // 'literals' of length 'size'
 };
 
 struct LratBuilderWatch {
@@ -68,7 +60,7 @@ class LratBuilder {
   //
   static unsigned l2u (int lit);
   vector<LratBuilderWatcher> watchers;      // watchers of literals
-  vector<signed char> marks;            // mark bits of literals
+  vector<signed char> marks;                // mark bits of literals
 
   signed char & mark (int lit);
   signed char & checked_lit (int lit);
@@ -76,33 +68,33 @@ class LratBuilder {
 
   // access by abs(lit)
   static unsigned l2a (int lit);
-  vector<LratBuilderClause *> reasons;     // store reason for each assignment
-  vector<LratBuilderClause *> unit_reasons;     // store reason for each assignment
-  vector<bool> justified;              // probably better as array ??
+  vector<LratBuilderClause *> reasons;       // reason for each assignment
+  vector<LratBuilderClause *> unit_reasons;  // units get preferred
+  vector<bool> justified;                    
   vector<bool> todo_justify;
-  vector<signed char> checked_lits;
+  vector<signed char> checked_lits;          // this is implemented same as marks
   LratBuilderClause * conflict;
 
-  vector<uint64_t> chain;                  // lrat style proof chain
-  vector<uint64_t> reverse_chain;          // what the name says
-  vector<uint64_t> inconsistent_chain;          // what the name says
-  int unjustified;                         // number of lits we need to justify
+  vector<uint64_t> chain;                    // lrat style proof chain
+  vector<uint64_t> reverse_chain;            
+  vector<uint64_t> inconsistent_chain;       // store proof to reuse
+  unsigned unjustified;                      // number of lits to justify
   
   bool new_clause_taut;
-  bool inconsistent;            // found or added empty clause
+  bool inconsistent;                // found or added empty clause
 
-  uint64_t num_clauses;         // number of clauses in hash table
-  uint64_t num_garbage;         // number of garbage clauses
-  uint64_t size_clauses;        // size of clause hash table
+  uint64_t num_clauses;             // number of clauses in hash table
+  uint64_t num_garbage;             // number of garbage clauses
+  uint64_t size_clauses;            // size of clause hash table
   LratBuilderClause ** clauses;     // hash table of clauses
   LratBuilderClause * garbage;      // linked list of garbage clauses
 
-  vector<int> unsimplified;     // original clause for reporting
-  vector<int> simplified;       // clause for sorting
-
-  vector<int> trail;            // for propagation
-
-  unsigned next_to_propagate;   // next to propagate on trail
+  vector<int> unsimplified;         // original clause for reporting
+  vector<int> simplified;           // clause for sorting
+                                  
+  vector<int> trail;                // for propagation
+                                  
+  unsigned next_to_propagate;       // next to propagate on trail
 
   void enlarge_vars (int64_t idx);
   void import_literal (int lit);
@@ -110,20 +102,20 @@ class LratBuilder {
   void tautological ();
   LratBuilderClause * assumption;
   LratBuilderClause * inconsistent_clause;
-  vector<LratBuilderClause *> unit_clauses;          // we need this because propagate
-                                                 // cannot propagate unit clauses
+  vector<LratBuilderClause *> unit_clauses;    // we need this because propagate
+                                               // cannot propagate unit clauses
   static const unsigned num_nonces = 4;
 
-  uint64_t nonces[num_nonces];  // random numbers for hashing
-  uint64_t last_hash;           // last computed hash value of clause
-  uint64_t last_id;              // id of the last added clause
+  uint64_t nonces[num_nonces];          // random numbers for hashing
+  uint64_t last_hash;                   // last computed hash value of clause
+  uint64_t last_id;                     // id of the last added clause
   uint64_t compute_hash (uint64_t);     // compute and save hash value of clause
 
   // Reduce hash value to the actual size.
   //
   static uint64_t reduce_hash (uint64_t hash, uint64_t size);
 
-  void enlarge_clauses ();      // enlarge hash table for clauses
+  void enlarge_clauses ();                     // enlarge hash table for clauses
   LratBuilderClause * insert ();               // insert clause in hash table
   LratBuilderClause ** find (const uint64_t);  // find clause position in hash table
 
@@ -150,16 +142,17 @@ class LratBuilder {
  
   // returns false if it fails to build a proof by calling one of the following
   bool build_chain_if_possible ();
-  // if the clause is a true tautology it is its own proof
-  void proof_taut ();
-  // normal proof building
+  // if the clause is a true tautology it needs no proof.
+  void proof_tautological_clause ();
+  // the following three initialize chain and justify_todo differently and then
+  // call construct_chain.
   void proof_clause ();
   // for satisfied clauses we only need to prove the satisfied lit
-  void proof_lit (int lit);
+  void proof_satisfied_literal (int lit);
   // if the state is already inconsistent we can add any clause by proving the inconsistent clause
-  void proof_inconsistent ();
+  void proof_inconsistent_clause ();
   // combining similar code from the above
-  void help_proof ();
+  void construct_chain ();
 
   struct {
 
@@ -193,8 +186,8 @@ public:
   void delete_clause (uint64_t, const vector<int> &);
   vector<uint64_t> add_clause_get_proof (uint64_t, const vector<int> &);
   
-  void finalize ();          // inelegant :/
-
+  void finalize ();             // inelegant but necessary until main solver
+                                // has clause ids for every clause.
   void print_stats ();
   void dump ();                 // for debugging purposes only
 };

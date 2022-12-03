@@ -7,15 +7,11 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// This checker implements an LRUP checker. TODO: describe options. This is
-// useful for model based testing (and delta-debugging), where we can not
-// rely on an external proof checker.
+// This checker implements an LRUP checker.
 // It requires LRAT-style proof chains for each learned clause that we can
 // currently only build with lratbuilder.
 //
 // Most of the infrastructure is taken from checker, but without the propagation
-//
-// TODO: maybe experiment -> timeloss
 
 /*------------------------------------------------------------------------*/
 
@@ -114,11 +110,10 @@ public:
   void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t> &);
 
   // could later be used for frat. just assume the clause is correct because we
-  // have no proof
-  void add_derived_clause (uint64_t, const vector<int> &) { } // TODO: add this to
-                                                            // make partial (frat)
-                                                            // checks possible.
-  // check if the clause is actually present and delete it from the checker
+  // have no proof. TODO: actually implement smt useful.
+  void add_derived_clause (uint64_t, const vector<int> &) { }
+
+  // check if the clause is present and delete it from the checker
   void delete_clause (uint64_t, const vector<int> &);
 
   void print_stats ();

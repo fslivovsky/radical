@@ -26,8 +26,8 @@ public:
   void add_derived_clause (uint64_t, const vector<int> &);
   void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t>&);
   void delete_clause (uint64_t, const vector<int> &);
-  void add_original_clause (uint64_t, const vector<int> &);
-  void finalize_clause (uint64_t, const vector<int> &);
+  void add_original_clause (uint64_t, const vector<int> &);       // for frat
+  void finalize_clause (uint64_t, const vector<int> &);           // for frat
 
   bool closed ();
   void close ();

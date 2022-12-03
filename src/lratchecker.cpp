@@ -210,10 +210,10 @@ void LratChecker::insert () {
 bool LratChecker::check (vector<uint64_t> proof_chain) {
   LOG (imported_clause, "LRAT CHECKER checking clause");
   stats.checks++;
-  // assert (proof_chain.size ());      // fails for tautological clauses.
-  for (auto & b : checked_lits) b = false;        // empty the vector
-  for (const auto & lit : imported_clause) {     // initialize -lit=true for
-    checked_lit (-lit) = true;                  // every lit in the learned clause
+  // assert (proof_chain.size ());             // this might be attempting to
+  for (auto & b : checked_lits) b = false;     // assert here but fails for
+  for (const auto & lit : imported_clause) {   // tautological clauses
+    checked_lit (-lit) = true;
     if (checked_lit (lit)) {
       LOG (imported_clause, "LRAT CHECKER clause tautological");
       return true;
@@ -221,9 +221,8 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
   }
   
   for (auto &id : proof_chain) {
-    LratCheckerClause * c = * find (id);      // TODO: there was a bug with tautological
-    if (!c)                                   // clauses. fixed by inserting the clause
-    {                                         // first (i hope)
+    LratCheckerClause * c = * find (id);
+    if (!c) {
       LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %ld", id);
       return false;
     }
@@ -231,16 +230,17 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
       if (checked_lit (-lit)) continue;
-      // assert (!checked_lit (lit));          // TODO: also buggy :/ -> because if we
-                                               // proove inconsistent clause we do
-                                               // not actually assume the current
-                                               // clause in lratbuilder. here we
-                                               // automatically do.
-                                            // we dont want satisfied clauses in our proof
-                                            // points to bug in proof building
-                                            // i.e. clauses appearing multiple times
-      if (unit && unit != lit) { unit = INT_MIN; break; }  // multiple unfalsified literals
-      unit = lit;                           // potential unit
+      // assert (!checked_lit (lit));      // attempting to assert here since
+                                           // usually this should be a bug in
+                                           // the proof chain but in some cases
+                                           // this can occur (e.g. when we prove
+                                           // the inconsistent clause to justify
+                                           // whatever
+      if (unit && unit != lit) {
+        unit = INT_MIN;                    // multiple unfalsified literals
+        break;
+      }
+      unit = lit;                          // potential unit
     }
     if (unit == INT_MIN) {
       LOG ("LRAT CHECKER check failed, found non unit clause %ld", id);
@@ -248,11 +248,14 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     }
     if (!unit) {
       LOG ("LRAT CHECKER check succeded, clause falsified %ld", id);  // TODO:
-      // assert (proof_chain.back () == id);      // TODO: buggy :( we dont want unnecessary long proofs
-                                              // same reason here as above.
-                                              // if lratbuilder is in inconsistent
-                                              // state this does not necessarily hold.
-      return true;                           // would also be regarded as bug here
+      // assert (proof_chain.back () == id); // also attempting since this
+                                             // basically means the proof chain
+                                             // is unnecessarily long.
+                                             // but unfortunatly this also
+                                             // fails when we prove the
+                                             // inconsistent clause to justify
+                                             // whatever
+      return true;
     }
     LOG ("LRAT CHECKER found unit clause %ld, assign %d", id, unit);
     checked_lit (unit) = true;
@@ -298,10 +301,11 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
   STOP (checking);
 }
 
-/*
-void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
-}
-*/
+// TODO: use this when we want to add clauses to the checker that we have not proven
+// (e.g. when lrat proof chains are only generated in some cases and not generally)
+//void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
+//}
+//
 
 /*------------------------------------------------------------------------*/
 
@@ -315,11 +319,11 @@ void LratChecker::delete_clause (uint64_t id, const vector<int> & c) {
   LratCheckerClause ** p = find (id), * d = *p;
   if (d) {
     for (const auto & lit : imported_clause) mark (lit) = true;
-    const int * dp = d->literals;               // d should have the same literals
-    for (unsigned i = 0; i < d->size; i++) {    // as imported_clause if the code is not buggy
+    const int * dp = d->literals;
+    for (unsigned i = 0; i < d->size; i++) {
       int lit = *(dp + i);
-      if (!mark (lit)) {                 // TODO: print error instead of assert.
-        fatal_message_start ();
+      if (!mark (lit)) {                   // should never happen since ids
+        fatal_message_start ();            // are unique.
         fputs ("deleted clause not in proof:\n", stderr);
         for (const auto & lit : imported_clause)
           fprintf (stderr, "%d ", lit);
@@ -339,6 +343,8 @@ void LratChecker::delete_clause (uint64_t id, const vector<int> & c) {
     d->garbage = true;
     
     // If there are enough garbage clauses collect them.
+    // TODO: probably can just delete clause directly without
+    // specific garbage collection phase.
     if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
       collect_garbage_clauses ();
   } else {
