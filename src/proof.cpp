@@ -28,8 +28,8 @@ void Internal::trace (File * file) {
   assert (!tracer);
   new_proof_on_demand ();
   // both checkprooflrat and lrat have to be anabled for lrat proofs (at least
-  // at the moment
-  tracer = new Tracer (this, file, opts.binary, (opts.checkprooflrat && opts.lrat));
+  // at the moment TODO: bläh
+  tracer = new Tracer (this, file, opts.binary, (opts.checkprooflrat && opts.lrat), opts.lratpartial);
   LOG ("PROOF connecting proof tracer");
   proof->connect (tracer);
 }
