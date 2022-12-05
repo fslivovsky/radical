@@ -614,6 +614,7 @@ int Internal::solve (bool preprocess_only) {
     if (!res) res = lucky_phases ();
     if (!res) res = cdcl_loop_with_inprocessing ();
   }
+  finalize ();
   reset_solving ();
   report_solving (res);
   STOP (solve);
@@ -702,7 +703,16 @@ int Internal::lookahead () {
 void Internal::finalize () {
   if (!proof || !opts.lrat || !opts.checkprooflrat) return;
   LOG ("finalizing");
-  proof->finalize ();
+  proof->finalize_clause (conflict_id, {});
+  for (unsigned idx = 1; idx < unit_ids.size (); idx++) {
+    int64_t id = unit_ids[idx];
+    if (!id) continue;
+    int lit = idx * val (idx);                   // prob wrong.
+    proof->finalize_clause (id, {lit});
+  }
+  for (const auto & c : clauses)
+    // See the discussion in 'propagate' on why garbage binary clauses stick around.
+    if (!c->garbage || c->size == 2) proof->finalize_clause (c);
 }
 
 /*------------------------------------------------------------------------*/

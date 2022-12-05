@@ -186,8 +186,6 @@ public:
   void delete_clause (uint64_t, const vector<int> &);
   vector<uint64_t> add_clause_get_proof (uint64_t, const vector<int> &);
   
-  void finalize ();             // inelegant but necessary until main solver
-                                // has clause ids for every clause.
   void print_stats ();
   void dump ();                 // for debugging purposes only
 };

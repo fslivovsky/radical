@@ -148,6 +148,25 @@ void Proof::add_derived_clause (uint64_t id, const vector<int> & c) {
   add_derived_clause ();
 }
 
+void Proof::finalize_clause (Clause * c) {
+  LOG (c, "PROOF finalizing clause");
+  assert (clause.empty ());
+  add_literals (c);
+  clause_id = c->id;
+  finalize_clause ();
+}
+
+
+void Proof::finalize_clause (uint64_t id, const vector<int> & c) {
+  LOG (c, "PROOF finalizing clause");
+  assert (clause.empty ());
+  for (const auto & lit : c)
+    add_literal (lit);
+  clause_id = id;
+  finalize_clause ();
+}
+
+
 /*------------------------------------------------------------------------*/
 
 // During garbage collection clauses are shrunken by removing falsified
@@ -205,6 +224,7 @@ void Proof::add_original_clause () {
   if (tracer)
     tracer->add_original_clause (clause_id, clause);
   clause.clear ();
+  clause_id = 0;
 }
 
 
@@ -233,6 +253,7 @@ void Proof::add_derived_clause () {
   }
   proof_chain.clear ();
   clause.clear ();
+  clause_id = 0;
 }
 
 void Proof::delete_clause () {
@@ -246,13 +267,14 @@ void Proof::delete_clause () {
   if (tracer)
     tracer->delete_clause (clause_id, clause);
   clause.clear ();
+  clause_id = 0;
 }
 
-void Proof::finalize () {
-  if (!lrat) return;
-  if (!tracer) return;
-  assert (lratbuilder);
-  lratbuilder->finalize ();
+void Proof::finalize_clause () {
+  if (tracer)
+    tracer->finalize_clause (clause_id, clause);
+  clause.clear ();
+  clause_id = 0;
 }
 
 }
