@@ -157,7 +157,11 @@ struct Internal {
   Reluctant reluctant;          // restart counter in stable mode
   size_t vsize;                 // actually allocated variable data size
   int max_var;                  // internal maximum variable index
-  uint64_t clause_id;            // last used id for clauses
+  uint64_t clause_id;           // last used id for clauses
+  uint64_t original_id;         // ids for original clauses to produce lrat
+  uint64_t reserved_ids;        // number of reserved ids for original clauses
+  uint64_t conflict_id;         // store conflict id for finalize (frat)
+  vector<uint64_t> unit_ids;    // store unit ids for finalize (frat)
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
@@ -255,6 +259,9 @@ struct Internal {
   void init_scores (int old_max_var, int new_max_var);
 
   void add_original_lit (int lit);
+  
+  // Reserve ids for original clauses to produce lrat
+  void reserve_ids (int number);
 
   // Enlarge tables.
   //
@@ -519,7 +526,7 @@ struct Internal {
   void deallocate_clause(Clause *);
   void delete_clause (Clause *);
   void mark_garbage (Clause *);
-  void assign_original_unit (int);
+  void assign_original_unit (uint64_t, int);
   void add_new_original_clause (uint64_t);
   Clause * new_learned_redundant_clause (int glue);
   Clause * new_hyper_binary_resolved_clause (bool red, int glue);

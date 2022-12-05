@@ -16,15 +16,21 @@ void Internal::learn_empty_clause () {
   assert (!unsat);
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
-  if (proof) proof->add_derived_empty_clause (++clause_id);
+  int64_t id = ++clause_id;
+  if (proof) proof->add_derived_empty_clause (id);
   unsat = true;
+  conflict_id = id;
 }
 
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
-  if (proof) proof->add_derived_unit_clause (++clause_id, lit);
+  int64_t id = ++clause_id;
+  if (proof) proof->add_derived_unit_clause (id, lit);
   mark_fixed (lit);
+  int idx = vidx (lit);
+  assert ((unsigned) idx < unit_ids.size ());
+  unit_ids[idx] = id;
 }
 
 /*------------------------------------------------------------------------*/

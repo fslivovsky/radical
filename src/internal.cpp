@@ -21,6 +21,8 @@ Internal::Internal ()
   vsize (0),
   max_var (0),
   clause_id (0),
+  original_id (0),
+  reserved_ids (0),
   level (0),
   vals (0),
   score_inc (1.0),
@@ -147,6 +149,7 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.min, new_vsize);
   enlarge_zero (marks, new_vsize);
   vsize = new_vsize;
+  unit_ids.resize (new_vsize);
 }
 
 void Internal::init_vars (int new_max_var) {
@@ -181,12 +184,20 @@ void Internal::add_original_lit (int lit) {
   if (lit) {
     original.push_back (lit);
   } else {
-    const uint64_t id = ++clause_id;
+    const uint64_t id = original_id < reserved_ids ? ++original_id : ++clause_id;
     if (proof) proof->add_original_clause (id, original);
     add_new_original_clause (id);
     original.clear ();
   }
 }
+
+/*------------------------------------------------------------------------*/
+
+void Internal::reserve_ids (int number) {
+  assert (number > 0);
+  clause_id = reserved_ids = number;
+}
+
 
 /*------------------------------------------------------------------------*/
 

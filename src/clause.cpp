@@ -287,7 +287,7 @@ void Internal::mark_garbage (Clause * c) {
 // Almost the same function as 'search_assign' except that we do not pretend
 // to learn a new unit clause (which was confusing in log files).
 
-void Internal::assign_original_unit (int lit) {
+void Internal::assign_original_unit (uint64_t id, int lit) {
   assert (!level);
   const int idx = vidx (lit);
   assert (!vals[idx]);
@@ -302,6 +302,8 @@ void Internal::assign_original_unit (int lit) {
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
   trail.push_back (lit);
+  assert ((unsigned) idx < unit_ids.size ());
+  unit_ids[idx] = id;
   LOG ("original unit assign %d", lit);
   mark_fixed (lit);
   if (propagate ()) return;
@@ -356,11 +358,12 @@ void Internal::add_new_original_clause (uint64_t id) {
         if (!original.size ()) VERBOSE (1, "found empty original clause");
         else MSG ("found falsified original clause");
         unsat = true;
+        conflict_id = new_id;
       }
     } else if (size == 1) {
-      assign_original_unit (clause[0]);
       if (original.size () > size)
         new_id = ++clause_id;
+      assign_original_unit (new_id, clause[0]);
     } else {
       Clause * c = new_clause (false);
       if (original.size () == size)
