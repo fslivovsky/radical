@@ -302,8 +302,8 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
   trail.push_back (lit);
-  assert ((unsigned) idx < unit_ids.size ());
-  unit_ids[idx] = id;
+  UnitClause u (lit, id);
+  unit_clauses.push_back (u);
   LOG ("original unit assign %d", lit);
   mark_fixed (lit);
   if (propagate ()) return;
@@ -351,9 +351,14 @@ void Internal::add_new_original_clause (uint64_t id) {
   } else {
     uint64_t new_id = id;
     size_t size = clause.size ();
+    if (original.size () > size) {
+      new_id = ++clause_id;
+      if (proof) {
+        proof->add_derived_clause (new_id, clause);
+        proof->delete_clause (id, original);
+      }
+    }
     if (!size) {
-      if (original.size () > size)
-        new_id = ++clause_id;
       if (!unsat) {
         if (!original.size ()) VERBOSE (1, "found empty original clause");
         else MSG ("found falsified original clause");
@@ -361,25 +366,15 @@ void Internal::add_new_original_clause (uint64_t id) {
         conflict_id = new_id;
       }
     } else if (size == 1) {
-      if (original.size () > size)
-        new_id = ++clause_id;
       assign_original_unit (new_id, clause[0]);
     } else {
       Clause * c = new_clause (false);
-      if (original.size () == size)
-      {
-        c->id = id;
-        clause_id--;
-      }
-      new_id = c->id;
+      c->id = new_id;
+      clause_id--;
       watch_clause (c);
     }
     if (original.size () > size) {
       external->check_learned_clause ();
-      if (proof) {
-        proof->add_derived_clause (new_id, clause);
-        proof->delete_clause (id, original);
-      }
     }
   }
   clause.clear ();

@@ -26,11 +26,10 @@ void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
   int64_t id = ++clause_id;
+  UnitClause u (lit, id);
+  unit_clauses.push_back (u);
   if (proof) proof->add_derived_unit_clause (id, lit);
   mark_fixed (lit);
-  int idx = vidx (lit);
-  assert ((unsigned) idx < unit_ids.size ());
-  unit_ids[idx] = id;
 }
 
 /*------------------------------------------------------------------------*/

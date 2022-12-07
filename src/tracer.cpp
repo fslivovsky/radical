@@ -212,7 +212,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {
 
 void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const vector<uint64_t> & chain) {
   if (file->closed ()) return;
-  if (frat) frat_add_derived_clause (id, clause);
+  if (frat) frat_add_derived_clause (id, clause, chain);
   else if (lrat) lrat_add_clause (id, clause, chain);
   else drat_add_clause (clause);
   added++;

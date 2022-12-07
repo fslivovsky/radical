@@ -149,7 +149,6 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.min, new_vsize);
   enlarge_zero (marks, new_vsize);
   vsize = new_vsize;
-  unit_ids.resize (new_vsize);
 }
 
 void Internal::init_vars (int new_max_var) {
@@ -194,7 +193,7 @@ void Internal::add_original_lit (int lit) {
 /*------------------------------------------------------------------------*/
 
 void Internal::reserve_ids (int number) {
-  assert (number > 0);
+  assert (number >= 0);
   clause_id = reserved_ids = number;
 }
 
@@ -701,17 +700,20 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize () {
-  if (!proof || !opts.lrat || !opts.checkprooflrat) return;
+  if (!proof || !opts.lratpartial) return;
   LOG ("finalizing");
   proof->finalize_clause (conflict_id, {});
-  for (unsigned idx = 1; idx < unit_ids.size (); idx++) {
-    int64_t id = unit_ids[idx];
-    if (!id) continue;
-    int lit = idx * val (idx);                   // prob wrong.
+  for (auto & u : unit_clauses) {
+    //if (idx > (unsigned) max_var) break;
+    int64_t id = u.id;
+    assert (id);
+    int lit = u.lit;
+    assert (lit);
     proof->finalize_clause (id, {lit});
   }
+  // See the discussion in 'propagate' on why garbage binary clauses stick around.
+  // maybe the discussion is only in fradical TODO: check thats
   for (const auto & c : clauses)
-    // See the discussion in 'propagate' on why garbage binary clauses stick around.
     if (!c->garbage || c->size == 2) proof->finalize_clause (c);
 }
 

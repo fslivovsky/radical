@@ -108,6 +108,12 @@ struct CubesWithStatus {
   std::vector<std::vector<int>> cubes;
 };
 
+struct UnitClause {
+  int lit;
+  uint64_t id;
+  UnitClause (int lit, uint64_t id) : lit (lit), id (id) { }
+};
+
 /*------------------------------------------------------------------------*/
 
 struct Internal {
@@ -161,7 +167,7 @@ struct Internal {
   uint64_t original_id;         // ids for original clauses to produce lrat
   uint64_t reserved_ids;        // number of reserved ids for original clauses
   uint64_t conflict_id;         // store conflict id for finalize (frat)
-  vector<uint64_t> unit_ids;    // store unit ids for finalize (frat)
+  vector<UnitClause> unit_clauses;  // keep track of unit_clauses (lrat/frat)
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
