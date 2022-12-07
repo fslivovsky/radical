@@ -26,7 +26,8 @@ void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);
   int64_t id = ++clause_id;
-  UnitClause u (lit, id);
+  int elit = externalize (lit);
+  UnitClause u (elit, id);
   unit_clauses.push_back (u);
   if (proof) proof->add_derived_unit_clause (id, lit);
   mark_fixed (lit);

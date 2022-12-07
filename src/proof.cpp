@@ -146,6 +146,15 @@ void Proof::add_derived_clause (uint64_t id, const vector<int> & c) {
   add_derived_clause ();
 }
 
+void Proof::finalize_unit (uint64_t id, int external_lit) {
+  LOG ("PROOF finalizing clause %d", external_lit);
+  assert (clause.empty ());
+  clause.push_back (external_lit);
+  clause_id = id;
+  finalize_clause ();
+}
+
+
 void Proof::finalize_clause (Clause * c) {
   LOG (c, "PROOF finalizing clause");
   assert (clause.empty ());

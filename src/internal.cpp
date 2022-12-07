@@ -707,9 +707,9 @@ void Internal::finalize () {
     //if (idx > (unsigned) max_var) break;
     int64_t id = u.id;
     assert (id);
-    int lit = u.lit;
-    assert (lit);
-    proof->finalize_clause (id, {lit});
+    int elit = u.lit;
+    assert (elit);
+    proof->finalize_unit (id, elit);
   }
   // See the discussion in 'propagate' on why garbage binary clauses stick around.
   // maybe the discussion is only in fradical TODO: check thats

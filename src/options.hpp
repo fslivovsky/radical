@@ -43,7 +43,7 @@ OPTION( chrono,            1,  0,  2,0,0,1, "chronological backtracking") \
 OPTION( chronoalways,      0,  0,  1,0,0,1, "force always chronological") \
 OPTION( chronolevelim,   1e2,  0,2e9,0,0,1, "chronological level limit") \
 OPTION( chronoreusetrail,  1,  0,  1,0,0,1, "reuse trail chronologically") \
-OPTION( compact,           1,  0,  1,0,1,1, "compact internal variables") \
+OPTION( compact,           1,  1,  1,0,1,1, "compact internal variables") \
 OPTION( compactint,      2e3,  1,2e9,0,0,1, "compacting interval") \
 OPTION( compactlim,      1e2,  0,1e3,0,0,1, "inactive limit per mille") \
 OPTION( compactmin,      1e2,  1,2e9,0,0,1, "minimum inactive limit") \
@@ -103,7 +103,7 @@ OPTION( instantiateonce,   1,  0,  1,0,0,1, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,              1,  1,  1,0,0,1, "use lrat proof format") \
-OPTION( lratpartial,       0,  0,  0,0,0,1, "use frat proof format") \
+OPTION( lratpartial,       1,  1,  1,0,0,1, "use frat proof format") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \

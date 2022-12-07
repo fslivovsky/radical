@@ -222,14 +222,6 @@ void Internal::compact () {
     }
   }
 
-  // map literals in unit_clauses TODO: we seem to have a problem.
-  for (auto & u : unit_clauses) {
-    int lit = u.lit;
-    const int dst = mapper.map_lit (lit);
-    assert (dst);
-    u.lit = dst;
-  }
-
   // Map the blocking literals in all watches.
   //
   if (!wtab.empty ())

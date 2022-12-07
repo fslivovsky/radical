@@ -302,7 +302,8 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   assert (val (lit) > 0);
   assert (val (-lit) < 0);
   trail.push_back (lit);
-  UnitClause u (lit, id);
+  int elit = externalize (lit);
+  UnitClause u (elit, id);
   unit_clauses.push_back (u);
   LOG ("original unit assign %d", lit);
   mark_fixed (lit);
