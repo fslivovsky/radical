@@ -705,7 +705,7 @@ void Internal::finalize () {
   if (!proof || !opts.lratpartial) return;
   LOG ("finalizing");
   proof->finalize_clause (conflict_id, {});
-  for (int uidx = 0; uidx <= vlit (max_var); uidx++) {
+  for (unsigned uidx = 0; uidx <= vlit (max_var) + 1; uidx++) {
     //if (idx > (unsigned) max_var) break;
     const uint64_t id = unit_clauses[uidx];
     if (!id) continue;

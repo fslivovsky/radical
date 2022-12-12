@@ -213,12 +213,19 @@ void Internal::compact () {
   //
   for (auto src : internal->vars) {
     const int dst = mapper.map_idx (src);
-    if (!dst) continue;
-    assert (0 < dst);
     assert (dst <= src);
-    if (dst != mapper.map_first_fixed || src == mapper.first_fixed) {
-      unit_clauses[2*src] = unit_clauses[2*dst] ;
-      unit_clauses[2*src + 1] = unit_clauses[2*dst + 1] ;
+    const signed char tmp = internal->val (src);
+    if (!dst && !tmp) {
+      unit_clauses[2*src] = 0;
+      unit_clauses[2*src + 1] = 0;
+      continue;
+    }
+    if (!tmp || src == mapper.first_fixed) {
+      assert (0 < dst);
+      if (dst == src) continue;
+      assert (!unit_clauses[2*dst] && !unit_clauses[2*dst + 1]);
+      unit_clauses[2*dst] = unit_clauses[2*src] ;
+      unit_clauses[2*dst + 1] = unit_clauses[2*src + 1] ;
       continue;
     }
     uint64_t id = unit_clauses[2*src];
@@ -227,6 +234,7 @@ void Internal::compact () {
     unit_clauses[2*src] = 0;
     unit_clauses[2*src + 1] = 0;
     assert (id);
+    LOG ({lit}, "compact delete unit");
     proof->delete_clause (id, {lit});
   }
   unit_clauses.resize (2*mapper.new_vsize);
