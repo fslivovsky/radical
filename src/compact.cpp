@@ -209,6 +209,29 @@ void Internal::compact () {
     external->e2i[eidx] = dst;
   }
 
+  // Delete garbage units. Needs to occur before resizing unit_clauses
+  //
+  for (auto src : internal->vars) {
+    const int dst = mapper.map_idx (src);
+    if (!dst) continue;
+    assert (0 < dst);
+    assert (dst <= src);
+    if (dst != mapper.map_first_fixed || src == mapper.first_fixed) {
+      unit_clauses[2*src] = unit_clauses[2*dst] ;
+      unit_clauses[2*src + 1] = unit_clauses[2*dst + 1] ;
+      continue;
+    }
+    uint64_t id = unit_clauses[2*src];
+    int lit = src;
+    if (!id) { id = unit_clauses[2*src + 1]; lit = -lit; }
+    unit_clauses[2*src] = 0;
+    unit_clauses[2*src + 1] = 0;
+    assert (id);
+    proof->delete_clause (id, {lit});
+  }
+  unit_clauses.resize (2*mapper.new_vsize);
+  shrink_vector (unit_clauses);
+
   // Map the literals in all clauses.
   //
   for (const auto & c : clauses) {

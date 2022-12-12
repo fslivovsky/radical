@@ -129,6 +129,7 @@ void Internal::enlarge (int new_max_var) {
   while (new_vsize <= (size_t) new_max_var) new_vsize *= 2;
   LOG ("enlarge internal size from %zd to new size %zd", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
+  enlarge_zero (unit_clauses, 2*new_vsize);
   enlarge_only (wtab, 2*new_vsize);
   enlarge_only (vtab, new_vsize);
   enlarge_zero (parents, new_vsize);
@@ -194,6 +195,7 @@ void Internal::add_original_lit (int lit) {
 
 void Internal::reserve_ids (int number) {
   assert (number >= 0);
+  assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
 }
 
@@ -703,13 +705,12 @@ void Internal::finalize () {
   if (!proof || !opts.lratpartial) return;
   LOG ("finalizing");
   proof->finalize_clause (conflict_id, {});
-  for (auto & u : unit_clauses) {
+  for (int uidx = 0; uidx <= vlit (max_var); uidx++) {
     //if (idx > (unsigned) max_var) break;
-    int64_t id = u.id;
-    assert (id);
-    int elit = u.lit;
-    assert (elit);
-    proof->finalize_unit (id, elit);
+    const uint64_t id = unit_clauses[uidx];
+    if (!id) continue;
+    const int lit = u2i (uidx);
+    proof->finalize_unit (id, lit);
   }
   // See the discussion in 'propagate' on why garbage binary clauses stick around.
   // maybe the discussion is only in fradical TODO: check thats

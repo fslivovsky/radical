@@ -142,7 +142,7 @@ void Tracer::frat_add_derived_clause (uint64_t id, const vector<int> & clause, c
     if (binary) put_binary_id (2*c);        // lrat can have negative ids
     else file->put (c), file->put (' ');    // in proof chain, so they get
   if (binary) put_binary_zero ();           // since cadical has no rat-steps
-  else file->put ("0\n");                   // this is just 2c here 
+  else file->put ("0\n");                   // this is just 2c here
 }
 void Tracer::frat_delete_clause (uint64_t id, const vector<int> & clause) {
   LOG ("TRACER FRAT tracing deletion of clause");

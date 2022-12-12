@@ -423,15 +423,13 @@ bool LratBuilder::unit_propagate () {
     if (c->garbage) { j--; continue; }        // skip garbage clauses
     const unsigned size = c->size;
     assert (size == 1);
-    if (size == 1) {
-      int lit = c->literals[0];
-      int value = val (lit);
-      if (value > 0) continue;
-      else if (!value) assign_reason (c->literals[0], c);
-      else {
-        res = false;
-        conflict = c;
-      }
+    int lit = c->literals[0];
+    int value = val (lit);
+    if (value > 0) continue;
+    else if (!value) assign_reason (c->literals[0], c);
+    else {
+      res = false;
+      conflict = c;
     }
   }
   while (i != end) *j++ = *i++;
