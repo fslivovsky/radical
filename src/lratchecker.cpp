@@ -223,7 +223,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
   for (auto &id : proof_chain) {
     LratCheckerClause * c = * find (id);
     if (!c) {
-      LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %ld", id);
+      LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %" PRIu64, id);
       return false;
     }
     int unit = 0;
@@ -243,11 +243,11 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       unit = lit;                          // potential unit
     }
     if (unit == INT_MIN) {
-      LOG ("LRAT CHECKER check failed, found non unit clause %ld", id);
+      LOG ("LRAT CHECKER check failed, found non unit clause %" PRIu64, id);
       return false;
     }
     if (!unit) {
-      LOG ("LRAT CHECKER check succeded, clause falsified %ld", id);  // TODO:
+      LOG ("LRAT CHECKER check succeded, clause falsified %" PRIu64, id);  // TODO:
       // assert (proof_chain.back () == id); // also attempting since this
                                              // basically means the proof chain
                                              // is unnecessarily long.
@@ -257,7 +257,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
                                              // whatever
       return true;
     }
-    LOG ("LRAT CHECKER found unit clause %ld, assign %d", id, unit);
+    LOG ("LRAT CHECKER found unit clause %" PRIu64 ", assign %d", id, unit);
     checked_lit (unit) = true;
   }
   return false;         // check failed because no empty clause was found
@@ -268,7 +268,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
 void LratChecker::add_original_clause (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRAT CHECKER addition of original clause");
-  LOG ("LRAT CHECKER clause id %ld", id);
+  LOG ("LRAT CHECKER clause id %" PRIu64, id);
   stats.added++;
   stats.original++;
   import_clause (c);
@@ -282,7 +282,7 @@ void LratChecker::add_original_clause (uint64_t id, const vector<int> & c) {
 void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const vector<uint64_t>& proof_chain) {
   START (checking);
   LOG (c, "LRAT CHECKER addition of derived clause");
-  LOG ("LRAT CHECKER clause id %ld", id);
+  LOG ("LRAT CHECKER clause id %" PRIu64, id);
   stats.added++;
   stats.derived++;
   import_clause (c);
@@ -304,7 +304,7 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
 void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
   START (checking);
   LOG (c, "LRAT CHECKER addition of derived unproven clause");
-  LOG ("LRAT CHECKER clause id %ld", id);
+  LOG ("LRAT CHECKER clause id %" PRIu64, id);
   stats.added++;
   import_clause (c);
   last_id = id;
@@ -319,7 +319,7 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
 void LratChecker::delete_clause (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRAT CHECKER checking deletion of clause");
-  LOG ("LRAT CHECKER clause id %ld", id);
+  LOG ("LRAT CHECKER clause id %" PRIu64, id);
   stats.deleted++;
   import_clause (c);
   last_id = id;

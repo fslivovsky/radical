@@ -683,13 +683,13 @@ void LratBuilder::add_clause (const char * type) {
   }
   if (!size) {
     LOG ("LRAT BUILDER added and checked empty %s clause", type);
-    LOG ("LRAT BUILDER clause with id %ld is now falsified", c->id);
+    LOG ("LRAT BUILDER clause with id %" PRIu64 " is now falsified", c->id);
     inconsistent = true;
     inconsistent_clause = c;
   } else if (sat) {
     LOG ("LRAT BUILDER added and checked satisfied %s clause", type);
   } else if (!unit) {
-    LOG ("LRAT BUILDER added and checked falsified %s clause with id %ld", type, c->id);    
+    LOG ("LRAT BUILDER added and checked falsified %s clause with id %" PRIu64, type, c->id);    
     inconsistent = true;
     inconsistent_clause = c;
   } else if (unit == INT_MIN) {
@@ -700,7 +700,7 @@ void LratBuilder::add_clause (const char * type) {
     assign_reason (unit, c);
     if (!propagate ()) {
       LOG ("LRAT BUILDER inconsistent after adding %s clause and propagating", type);
-      LOG ("LRAT BUILDER clause with id %ld is now falsified", conflict->id);
+      LOG ("LRAT BUILDER clause with id %" PRIu64 " is now falsified", conflict->id);
       inconsistent = true;
       inconsistent_clause = conflict;
       assert (clause_falsified (conflict));
@@ -713,7 +713,7 @@ void LratBuilder::add_clause (const char * type) {
 void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRAT BUILDER addition of original clause");
-  LOG ("LRAT BUILDER clause id %ld", id);
+  LOG ("LRAT BUILDER clause id %" PRIu64, id);
   stats.added++;
   stats.original++;
   import_clause (c);
@@ -729,7 +729,7 @@ void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
 vector<uint64_t> LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRAT BUILDER addition of derived clause");
-  LOG ("LRAT BUILDER clause id %ld", id);
+  LOG ("LRAT BUILDER clause id %" PRIu64, id);
   stats.added++;
   stats.derived++;
   import_clause (c);
@@ -771,7 +771,7 @@ void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
 void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRAT BUILDER checking deletion of clause");
-  LOG ("LRAT BUILDER clause id %ld", id);
+  LOG ("LRAT BUILDER clause id %" PRIu64, id);
   stats.deleted++;
   import_clause (c);
   last_id = id;
@@ -786,7 +786,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
       assert (mark (lit));
       LratBuilderClause * reason = reasons[l2a (lit)];
       if (!val (lit)) LOG ("LRAT BUILDER skipping lit %d not assigned", lit);
-      else LOG ("LRAT BUILDER lit %d reason id %ld", lit, reason->id);
+      else LOG ("LRAT BUILDER lit %d reason id %" PRIu64, lit, reason->id);
       if (reason == d) {
         LOG ("LRAT BUILDER reason matches, unassigning lit %d", lit);
         assert (val (lit));
@@ -836,7 +836,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
       } else if (inconsistent) {
         inconsistent = false;
         inconsistent_clause = 0;
-        LOG ("LRAT BUILDER no longer inconsistent after deletion of clause %ld", d->id);
+        LOG ("LRAT BUILDER no longer inconsistent after deletion of clause %" PRIu64, d->id);
       }
     }
     
