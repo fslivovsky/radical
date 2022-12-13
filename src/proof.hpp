@@ -67,6 +67,7 @@ public:
   void add_clause_with_chain (uint64_t, const vector<int> &, const vector<uint64_t> &);
   
   void delete_clause (uint64_t, const vector<int> &);
+  void delete_unit_clause (uint64_t id, const int lit);
   void delete_clause (Clause *);
   
   void finalize_unit (uint64_t, int);

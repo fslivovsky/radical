@@ -173,6 +173,15 @@ void Proof::delete_clause (uint64_t id, const vector<int> & c) {
   delete_clause ();
 }
 
+void Proof::delete_unit_clause (uint64_t id, const int lit) {
+  LOG ("PROOF deleting unit from proof %d", lit);
+  assert (clause.empty ());
+  add_literal (lit);
+  clause_id = id;
+  delete_clause ();
+}
+
+
 void Proof::finalize_clause (Clause * c) {
   LOG (c, "PROOF finalizing clause");
   assert (clause.empty ());
