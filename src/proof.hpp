@@ -25,6 +25,7 @@ class Proof {
   vector<uint64_t> proof_chain;   // lrat style proof chain of clause
   uint64_t clause_id;            // id of added clause
 
+  bool compare;        // compare direct lrat vs lratbuilder
 
   // the 'observers'
   Checker * checker;                    // drat checker with unit propagation
@@ -44,7 +45,7 @@ class Proof {
 
 public:
 
-  Proof (Internal *);
+  Proof (Internal *, bool);
   ~Proof ();
 
   void connect (Tracer * t) { tracer = t; }
@@ -63,8 +64,8 @@ public:
   void add_derived_clause (Clause *);
   void add_derived_clause (uint64_t, const vector<int> &);
 
-  void add_clause_with_chain (Clause * c, const vector<uint64_t> &);
-  void add_clause_with_chain (uint64_t, const vector<int> &, const vector<uint64_t> &);
+  void add_derived_clause (Clause * c, const vector<uint64_t> &);
+  void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t> &);
   
   void delete_clause (uint64_t, const vector<int> &);
   void delete_unit_clause (uint64_t id, const int lit);

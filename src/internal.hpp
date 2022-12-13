@@ -162,6 +162,7 @@ struct Internal {
   uint64_t reserved_ids;        // number of reserved ids for original clauses
   uint64_t conflict_id;         // store conflict id for finalize (frat)
   vector<uint64_t> unit_clauses;// keep track of unit_clauses (lrat/frat)
+  vector<uint64_t> lrat_chain;  // create lrat in solver: option lratdirect
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]

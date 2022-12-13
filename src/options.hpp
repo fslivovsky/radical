@@ -103,9 +103,10 @@ OPTION( instantiateonce,   1,  0,  1,0,0,1, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
 OPTION( lrat,              0,  0,  1,0,0,1, "use lrat proof format") \
+OPTION( lratdirect,        1,  0,  1,0,0,1, "direct lrat wherever possible") \
+OPTION( lratdirectcompare, 0,  0,  1,0,0,1, "compare direct lrat vs lratbuilder") \
 OPTION( lratfrat,          0,  0,  1,0,0,1, "use frat proof format") \
 OPTION( lratfratpartial,   0,  0,  1,0,0,1, "do not use lratbuilder") \
-OPTION( lratinternal,      1,  0,  1,0,0,1, "internal lrat wherever possible") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \

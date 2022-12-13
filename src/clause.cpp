@@ -334,6 +334,11 @@ void Internal::add_new_original_clause (uint64_t id) {
         tmp = val (lit);
         if (tmp < 0) {
           LOG ("removing falsified literal %d", lit);
+          if (opts.lratdirect) {
+            uint64_t uid = (unit_clauses[vlit (-lit)]);
+            assert (uid);
+            lrat_chain.push_back (uid);
+          }
         } else if (tmp > 0) {
           LOG ("satisfied since literal %d true", lit);
           skip = true;
@@ -354,7 +359,11 @@ void Internal::add_new_original_clause (uint64_t id) {
     if (original.size () > size) {
       new_id = ++clause_id;
       if (proof) {
-        proof->add_derived_clause (new_id, clause);
+        if (opts.lratdirect) {
+          lrat_chain.push_back (id);
+          LOG (lrat_chain, "proof chain: ");
+          proof->add_derived_clause (new_id, clause, lrat_chain);
+        } else proof->add_derived_clause (new_id, clause);
         proof->delete_clause (id, original);
       }
     }
@@ -378,6 +387,7 @@ void Internal::add_new_original_clause (uint64_t id) {
     }
   }
   clause.clear ();
+  lrat_chain.clear ();
 }
 
 // Add learned new clause during conflict analysis and watch it. Requires

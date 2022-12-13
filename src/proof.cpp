@@ -10,7 +10,7 @@ using namespace std;
 
 void Internal::new_proof_on_demand () {
   if (!proof) {
-    proof = new Proof (this);
+    proof = new Proof (this, opts.lratdirectcompare);
     LOG ("connecting proof to internal solver");
     build_full_lrat ();
   }
@@ -69,7 +69,7 @@ void Internal::flush_trace () {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal * s) : internal (s), checker (0),
+Proof::Proof (Internal * s, bool c) : internal (s), compare (c), checker (0),
   tracer (0), lratbuilder (0), lratchecker (0) { LOG ("PROOF new"); }
 
 Proof::~Proof () { LOG ("PROOF delete"); }
@@ -134,7 +134,7 @@ void Proof::add_derived_clause (uint64_t id, const vector<int> & c) {
   add_derived_clause ();
 }
 
-void Proof::add_clause_with_chain (Clause * c, const vector<uint64_t> & chain) {
+void Proof::add_derived_clause (Clause * c, const vector<uint64_t> & chain) {
   LOG (c, "PROOF adding to proof derived");
   assert (clause.empty ());
   assert (proof_chain.empty ());
@@ -145,7 +145,7 @@ void Proof::add_clause_with_chain (Clause * c, const vector<uint64_t> & chain) {
   add_derived_clause ();
 }
 
-void Proof::add_clause_with_chain (uint64_t id, const vector<int> & c, const vector<uint64_t> & chain) {
+void Proof::add_derived_clause (uint64_t id, const vector<int> & c, const vector<uint64_t> & chain) {
   LOG (internal->clause, "PROOF adding derived clause");
   assert (clause.empty ());
   assert (proof_chain.empty ());
@@ -275,8 +275,18 @@ void Proof::add_derived_clause () {
   if (lratbuilder) {
     if (proof_chain.empty ())
       proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
-    else
-      lratbuilder->add_derived_clause (clause_id, clause);
+    else {
+      if (compare) {
+        vector<uint64_t> chain_too = lratbuilder->add_clause_get_proof (clause_id, clause);
+        LOG ("PROOF comparing lrat");
+        LOG (chain_too,   "PROOF compare direct lrat: ");
+        LOG (proof_chain, "PROOF compare lratbuilder: ");
+        // TODO: log
+        if (chain_too.size () < proof_chain.size ()) {
+          proof_chain = chain_too;                // always use shorter proof
+        }
+      } else lratbuilder->add_derived_clause (clause_id, clause);
+    }
   }
   if (lratchecker) {
     if (proof_chain.empty ())

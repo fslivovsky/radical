@@ -50,6 +50,13 @@ static void log (Internal *,
                  const char *fmt, ...)
                  CADICAL_ATTRIBUTE_FORMAT (4, 5);
 
+
+// used for logging lrat proof chains
+//
+static void log (Internal *, const vector<uint64_t> &, const char *fmt, ...)
+                 CADICAL_ATTRIBUTE_FORMAT (3, 4);
+
+
 static void log_empty_line (Internal *);
 
 };
