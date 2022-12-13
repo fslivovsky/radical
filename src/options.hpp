@@ -31,7 +31,7 @@ OPTION( blockocclim,     1e2,  1,2e9,2,0,1, "occurrence limit") \
 OPTION( bump,              1,  0,  1,0,0,1, "bump variables") \
 OPTION( bumpreason,        1,  0,  1,0,0,1, "bump reason literals too") \
 OPTION( bumpreasondepth,   1,  1,  3,0,0,1, "bump reason depth") \
-OPTION( check,             1,  0,  1,0,0,0, "enable internal checking") \
+OPTION( check,             0,  0,  1,0,0,0, "enable internal checking") \
 OPTION( checkassumptions,  1,  0,  1,0,0,0, "check assumptions satisfied") \
 OPTION( checkconstraint,   1,  0,  1,0,0,0, "check constraint satisfied") \
 OPTION( checkfailed,       1,  0,  1,0,0,0, "check failed literals form core") \
@@ -102,8 +102,10 @@ OPTION( instantiateocclim, 1,  1,2e9,2,0,1, "maximum occurrence limit") \
 OPTION( instantiateonce,   1,  0,  1,0,0,1, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0, "sort logged clauses") \
-OPTION( lrat,              1,  0,  1,0,0,1, "use lrat proof format") \
-OPTION( lratpartial,       1,  0,  1,0,0,1, "use frat proof format") \
+OPTION( lrat,              0,  0,  1,0,0,1, "use lrat proof format") \
+OPTION( lratfrat,          0,  0,  1,0,0,1, "use frat proof format") \
+OPTION( lratfratpartial,   0,  0,  1,0,0,1, "do not use lratbuilder") \
+OPTION( lratinternal,      1,  0,  1,0,0,1, "internal lrat wherever possible") \
 OPTION( lucky,             1,  0,  1,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \

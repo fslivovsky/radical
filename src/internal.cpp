@@ -702,7 +702,7 @@ int Internal::lookahead () {
 /*------------------------------------------------------------------------*/
 
 void Internal::finalize () {
-  if (!proof || !opts.lratpartial) return;
+  if (!proof || !opts.lratfrat) return;
   LOG ("finalizing");
   proof->finalize_clause (conflict_id, {});
   for (unsigned uidx = 0; uidx <= vlit (max_var) + 1; uidx++) {

@@ -21,13 +21,11 @@ class Proof {
 
   Internal * internal;
 
-  vector<int> clause;           // of external literals
+  vector<int> clause;              // of external literals
   vector<uint64_t> proof_chain;   // lrat style proof chain of clause
   uint64_t clause_id;            // id of added clause
-  
-  
-  bool lrat;
-  
+
+
   // the 'observers'
   Checker * checker;                    // drat checker with unit propagation
   Tracer * tracer;                      // trace proof to file
@@ -46,7 +44,7 @@ class Proof {
 
 public:
 
-  Proof (Internal *, bool);
+  Proof (Internal *);
   ~Proof ();
 
   void connect (Tracer * t) { tracer = t; }
@@ -65,6 +63,9 @@ public:
   void add_derived_clause (Clause *);
   void add_derived_clause (uint64_t, const vector<int> &);
 
+  void add_clause_with_chain (Clause * c, const vector<uint64_t> &);
+  void add_clause_with_chain (uint64_t, const vector<int> &, const vector<uint64_t> &);
+  
   void delete_clause (uint64_t, const vector<int> &);
   void delete_clause (Clause *);
   

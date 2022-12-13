@@ -301,11 +301,18 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
   STOP (checking);
 }
 
-// TODO: use this when we want to add clauses to the checker that we have not proven
-// (e.g. when lrat proof chains are only generated in some cases and not generally)
-//void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
-//}
-//
+void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c) {
+  START (checking);
+  LOG (c, "LRAT CHECKER addition of derived unproven clause");
+  LOG ("LRAT CHECKER clause id %ld", id);
+  stats.added++;
+  import_clause (c);
+  last_id = id;
+  assert (id);
+  insert ();
+  imported_clause.clear ();
+  STOP (checking);
+}
 
 /*------------------------------------------------------------------------*/
 

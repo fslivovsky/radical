@@ -120,6 +120,7 @@ class LratBuilder {
   LratBuilderClause ** find (const uint64_t);  // find clause position in hash table
 
   void add_clause (const char * type);
+  void clean ();                               // cleans up after adding/deleting clauses
 
   void collect_garbage_clauses ();
 

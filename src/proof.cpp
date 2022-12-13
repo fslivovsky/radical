@@ -10,15 +10,19 @@ using namespace std;
 
 void Internal::new_proof_on_demand () {
   if (!proof) {
-    bool lrat = opts.checkprooflrat;
-    proof = new Proof (this, lrat);
+    proof = new Proof (this);
     LOG ("connecting proof to internal solver");
-    if (lrat) {
-      assert (!lratbuilder);
-      lratbuilder = new LratBuilder (this);
-      LOG ("PROOF connecting lrat chain builder");
-      proof->connect (lratbuilder);
-    }
+    build_full_lrat ();
+  }
+}
+
+void Internal::build_full_lrat () {
+  // if (lratbuilder) return;
+  assert (!lratbuilder);                              // 99% sure this is correct
+  if (opts.lrat && !opts.lratfratpartial) {
+    lratbuilder = new LratBuilder (this);
+    LOG ("PROOF connecting lrat proof chain builder");
+    proof->connect (lratbuilder);
   }
 }
 
@@ -27,7 +31,7 @@ void Internal::new_proof_on_demand () {
 void Internal::trace (File * file) {
   assert (!tracer);
   new_proof_on_demand ();
-  tracer = new Tracer (this, file, opts.binary, (opts.checkprooflrat && opts.lrat), opts.lratpartial);
+  tracer = new Tracer (this, file, opts.binary, opts.lrat, opts.lratfrat);
   LOG ("PROOF connecting proof tracer");
   proof->connect (tracer);
 }
@@ -65,7 +69,7 @@ void Internal::flush_trace () {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal * s, bool l) : internal (s), lrat (l), checker (0),
+Proof::Proof (Internal * s) : internal (s), checker (0),
   tracer (0), lratbuilder (0), lratchecker (0) { LOG ("PROOF new"); }
 
 Proof::~Proof () { LOG ("PROOF delete"); }
@@ -121,6 +125,38 @@ void Proof::add_derived_clause (Clause * c) {
   add_derived_clause ();
 }
 
+void Proof::add_derived_clause (uint64_t id, const vector<int> & c) {
+  LOG (internal->clause, "PROOF adding derived clause");
+  assert (clause.empty ());
+  for (const auto & lit : c)
+    add_literal (lit);
+  clause_id = id;
+  add_derived_clause ();
+}
+
+void Proof::add_clause_with_chain (Clause * c, const vector<uint64_t> & chain) {
+  LOG (c, "PROOF adding to proof derived");
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  add_literals (c);
+  for (const auto & cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = c->id;
+  add_derived_clause ();
+}
+
+void Proof::add_clause_with_chain (uint64_t id, const vector<int> & c, const vector<uint64_t> & chain) {
+  LOG (internal->clause, "PROOF adding derived clause");
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  for (const auto & lit : c)
+    add_literal (lit);
+  for (const auto & cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_derived_clause ();
+}
+
 void Proof::delete_clause (Clause * c) {
   LOG (c, "PROOF deleting from proof");
   assert (clause.empty ());
@@ -137,24 +173,6 @@ void Proof::delete_clause (uint64_t id, const vector<int> & c) {
   delete_clause ();
 }
 
-void Proof::add_derived_clause (uint64_t id, const vector<int> & c) {
-  LOG (internal->clause, "PROOF adding derived clause");
-  assert (clause.empty ());
-  for (const auto & lit : c)
-    add_literal (lit);
-  clause_id = id;
-  add_derived_clause ();
-}
-
-void Proof::finalize_unit (uint64_t id, int lit) {
-  LOG ("PROOF finalizing clause %d", lit);
-  assert (clause.empty ());
-  add_literal (lit);
-  clause_id = id;
-  finalize_clause ();
-}
-
-
 void Proof::finalize_clause (Clause * c) {
   LOG (c, "PROOF finalizing clause");
   assert (clause.empty ());
@@ -163,12 +181,19 @@ void Proof::finalize_clause (Clause * c) {
   finalize_clause ();
 }
 
-
 void Proof::finalize_clause (uint64_t id, const vector<int> & c) {
   LOG (c, "PROOF finalizing clause");
   assert (clause.empty ());
   for (const auto & lit : c)
     add_literal (lit);
+  clause_id = id;
+  finalize_clause ();
+}
+
+void Proof::finalize_unit (uint64_t id, int lit) {
+  LOG ("PROOF finalizing clause %d", lit);
+  assert (clause.empty ());
+  add_literal (lit);
   clause_id = id;
   finalize_clause ();
 }
@@ -238,25 +263,25 @@ void Proof::add_original_clause () {
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
   assert (clause_id);
-  if (lrat) {
-    assert (lratbuilder);
-    proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
-    if (lratchecker)
-      lratchecker->add_derived_clause (clause_id, clause, proof_chain);
-    if (checker)
-      checker->add_derived_clause (clause_id, clause);
-    if (tracer)
-      tracer->add_derived_clause (clause_id, clause, proof_chain);
-  }
-  else {
-    if (lratbuilder)
+  if (lratbuilder) {
+    if (proof_chain.empty ())
+      proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
+    else
       lratbuilder->add_derived_clause (clause_id, clause);
-    if (lratchecker)
+  }
+  if (lratchecker) {
+    if (proof_chain.empty ())
       lratchecker->add_derived_clause (clause_id, clause);
-    if (checker)
-      checker->add_derived_clause (clause_id, clause);
-    if (tracer)
+    else
+      lratchecker->add_derived_clause (clause_id, clause, proof_chain);
+  }
+  if (checker)
+    checker->add_derived_clause (clause_id, clause);
+  if (tracer) {
+    if (proof_chain.empty ())
       tracer->add_derived_clause (clause_id, clause);
+    else
+      tracer->add_derived_clause (clause_id, clause, proof_chain);
   }
   proof_chain.clear ();
   clause.clear ();

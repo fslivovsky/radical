@@ -646,6 +646,13 @@ bool LratBuilder::build_chain_if_possible () {
 
 /*------------------------------------------------------------------------*/
 
+void LratBuilder::clean () {
+  simplified.clear ();
+  unsimplified.clear ();
+  new_clause_taut = false;
+  conflict = 0;
+}
+
 void LratBuilder::add_clause (const char * type) {
 #ifndef LOGGING
   (void) type;
@@ -699,8 +706,9 @@ void LratBuilder::add_clause (const char * type) {
       assert (clause_falsified (conflict));
     }
   }
-  conflict = 0;
 }
+
+/*------------------------------------------------------------------------*/
 
 void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
   START (checking);
@@ -714,9 +722,7 @@ void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
   assert (!new_clause_taut);
   tautological ();
   add_clause ("original");
-  simplified.clear ();
-  unsimplified.clear ();
-  new_clause_taut = false;
+  clean ();
   STOP (checking);
 }
 
@@ -742,19 +748,25 @@ vector<uint64_t> LratBuilder::add_clause_get_proof (uint64_t id, const vector<in
     fatal_message_end ();
   }
   else add_clause ("derived");
-  simplified.clear ();
-  unsimplified.clear ();
-  new_clause_taut = false;
+  clean ();
   STOP (checking);
   return chain;
 }
 
 void LratBuilder::add_derived_clause (uint64_t id, const vector<int> & c) {
-  LOG ("LRAT BUILDER no proof requested, treating clause as original");
-  add_original_clause (id, c);
+  START (checking);
+  LOG (c, "LRAT BUILDER addition of derived clause");
+  LOG ("LRAT BUILDER proceeding without proof chain building");
+  stats.added++;
+  import_clause (c);
+  last_id = id;
+  assert (id);
+  assert (!new_clause_taut);
+  tautological ();
+  add_clause ("derived");
+  clean ();
+  STOP (checking);
 }
-
-/*------------------------------------------------------------------------*/
 
 void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
   START (checking);
@@ -839,10 +851,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
     fputc ('0', stderr);
     fatal_message_end ();
   }
-  simplified.clear ();
-  unsimplified.clear ();
-  conflict = 0;
-  new_clause_taut = false;
+  clean ();
   STOP (checking);
 }
 
