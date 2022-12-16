@@ -11,6 +11,8 @@ Tracer::Tracer (Internal * i, File * f, bool b, bool lrat, bool frat) :
 {
   (void) internal;
   LOG ("TRACER new");
+  // TODO: if there is a checker that supports binary lrat take out this line:
+  binary = lrat && !frat ? 0 : binary;
 }
 
 Tracer::~Tracer () {
