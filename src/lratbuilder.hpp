@@ -185,7 +185,7 @@ public:
   void add_original_clause (uint64_t, const vector<int> &);
   void add_derived_clause (uint64_t, const vector<int> &);
   void delete_clause (uint64_t, const vector<int> &);
-  vector<uint64_t> add_clause_get_proof (uint64_t, const vector<int> &);
+  const vector<uint64_t> & add_clause_get_proof (uint64_t, const vector<int> &);
   
   void print_stats ();
   void dump ();                 // for debugging purposes only

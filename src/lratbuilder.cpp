@@ -726,7 +726,7 @@ void LratBuilder::add_original_clause (uint64_t id, const vector<int> & c) {
   STOP (checking);
 }
 
-vector<uint64_t> LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> & c) {
+const vector<uint64_t> & LratBuilder::add_clause_get_proof (uint64_t id, const vector<int> & c) {
   START (checking);
   LOG (c, "LRAT BUILDER addition of derived clause");
   LOG ("LRAT BUILDER clause id %" PRIu64, id);
