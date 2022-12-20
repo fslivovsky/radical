@@ -421,8 +421,7 @@ bool LratBuilder::unit_propagate () {
   for (; res && i != end; i++) {
     LratBuilderClause * c = *j++ = *i;
     if (c->garbage) { j--; continue; }        // skip garbage clauses
-    const unsigned size = c->size;
-    assert (size == 1);
+    assert (c->size == 1);
     int lit = c->literals[0];
     int value = val (lit);
     if (value > 0) continue;
