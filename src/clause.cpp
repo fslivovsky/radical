@@ -322,6 +322,7 @@ void Internal::add_new_original_clause (uint64_t id) {
     skip = true;
   } else {
     assert (clause.empty ());
+    assert (lrat_chain.empty ());
     for (const auto & lit : original) {
       int tmp = marked (lit);
       if (tmp > 0) {
@@ -336,8 +337,8 @@ void Internal::add_new_original_clause (uint64_t id) {
           LOG ("removing falsified literal %d", lit);
           if (opts.lratdirect) {
             uint64_t uid = (unit_clauses[vlit (-lit)]);
-            assert (uid);
-            lrat_chain.push_back (uid);
+            assert (uid);                        // not sure if this holds.
+            lrat_chain.push_back (uid);          // but it looks ok so far.
           }
         } else if (tmp > 0) {
           LOG ("satisfied since literal %d true", lit);

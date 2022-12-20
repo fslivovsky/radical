@@ -24,8 +24,8 @@ int Options::reportdefault;
 // not require that the 'Options' constructor was called.
 
 Option Options::table [] = {
-#define OPTION(N,V,L,H,O,P,R,D) \
-  { #N, (int) V, (int) L, (int) H, (int) O, (bool) P, D },
+#define OPTION(N,V,L,H,O,P,T,R,D) \
+  { #N, (int) V, (int) L, (int) H, (int) O, (bool) P, (bool) T, D },
   OPTIONS
 #undef OPTION
 };
@@ -99,7 +99,7 @@ Options::Options (Internal * s) : internal (s)
   //
   const char * prev = "";
   size_t i = 0;
-# define OPTION(N,V,L,H,O,P,R,D) \
+# define OPTION(N,V,L,H,O,P,T,R,D) \
   do { \
     if ((L) > (V)) \
       FATAL ("'" #N "' default '" #V "' " \
@@ -116,7 +116,7 @@ Options::Options (Internal * s) : internal (s)
     /* Thus this construction just reinitializes the table too even */ \
     /* though it might not be necessary. */ \
     assert (!table[i].name || !strcmp (table[i].name, #N)); \
-    table[i] = { #N, (int)(V), (int)(L), (int)(H), (int)(O), (bool)(P), D }; \
+    table[i] = { #N, (int)(V), (int)(L), (int)(H), (int)(O), (bool)(P), (bool)(T), D }; \
     prev = #N; \
     i++; \
   } while (0);
@@ -134,7 +134,7 @@ Options::Options (Internal * s) : internal (s)
 
   // Now overwrite default options with environment values.
   //
-# define OPTION(N,V,L,H,O,P,R,D) \
+# define OPTION(N,V,L,H,O,P,T,R,D) \
   initialize_from_environment (N, #N, L, H);
   OPTIONS
 # undef OPTION
@@ -187,7 +187,7 @@ void Options::print () {
 #endif
   char buffer[160];
   // We prefer the macro iteration here since '[VLH]' might be '1e9' etc.
-#define OPTION(N,V,L,H,O,P,R,D) \
+#define OPTION(N,V,L,H,O,P,T,R,D) \
   if (N != (V)) different++; \
   if (verbose || N != (V)) { \
     if ((L) == 0 && (H) == 1) { \
@@ -220,7 +220,7 @@ void Options::print () {
 
 void Options::usage () {
   // We prefer the macro iteration here since '[VLH]' might be '1e9' etc.
-#define OPTION(N,V,L,H,O,P,R,D) \
+#define OPTION(N,V,L,H,O,P,T,R,D) \
   if ((L) == 0 && (H) == 1) \
     printf ("  %-26s " D " [%s]\n", \
       "--" #N "=bool", (bool)(V) ? "true" : "false"); \
@@ -255,7 +255,7 @@ void Options::optimize (int val) {
     factor10 *= 10;
 
   unsigned increased = 0;
-#define OPTION(N,V,L,H,O,P,R,D) \
+#define OPTION(N,V,L,H,O,P,T,R,D) \
   do { \
     if (!(O)) break; \
     const int64_t factor = ((O) == 1 ? factor2 : factor10); \
@@ -279,7 +279,7 @@ void Options::optimize (int val) {
 
 void Options::disable_preprocessing () {
   size_t count = 0;
-#define OPTION(N,V,L,H,O,P,R,D) \
+#define OPTION(N,V,L,H,O,P,T,R,D) \
   do { \
     if (!(P)) break; \
     if (!(N)) break; \
@@ -301,9 +301,34 @@ bool Options::is_preprocessing_option (const char * name) {
 
 /*------------------------------------------------------------------------*/
 
+void Options::disable_non_lrat () {
+  size_t count = 0;
+#define OPTION(N,V,L,H,O,P,T,R,D) \
+  do { \
+    if (!(T)) break; \
+    if (!(N)) break; \
+    assert ((L) == 0); \
+    assert ((H) == 1); \
+    LOG ("lratplain mode disables '%s'", #N); \
+    count++; \
+    N = 0; \
+  } while (0);
+  OPTIONS
+#undef OPTION
+  LOG ("forced lratplain mode disabled %zd preprocessing options", count);
+}
+
+bool Options::is_non_lrat_option (const char * name) {
+  Option * o = has (name);
+  return o ? o->lrat : false;
+}
+
+
+/*------------------------------------------------------------------------*/
+
 void Options::reset_default_values () {
   size_t count = 0;
-#define OPTION(N,V,L,H,O,P,R,D) \
+#define OPTION(N,V,L,H,O,P,T,R,D) \
   do { \
     if (!(R)) break; \
     if (N == (V)) break; \
@@ -322,7 +347,7 @@ void Options::copy (Options & other) const {
 #ifdef LOGGING
   Internal * internal = other.internal;
 #endif
-#define OPTION(N,V,L,H,O,P,R,D) \
+#define OPTION(N,V,L,H,O,P,T,R,D) \
   if ((N) == (int)(V)) \
     LOG ("keeping non default option '--%s=%s'", #N, #V); \
   else if ((N) != (int)(V)) { \
