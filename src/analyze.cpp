@@ -17,7 +17,12 @@ void Internal::learn_empty_clause () {
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
   int64_t id = ++clause_id;
-  if (proof) proof->add_derived_empty_clause (id);
+  if (proof) {
+    if (opts.lratdirect) {
+      LOG (lrat_chain, "proof chain: ");
+      proof->add_derived_empty_clause (id, lrat_chain);
+    } else proof->add_derived_empty_clause (id);
+  }
   unsat = true;
   conflict_id = id;
 }
@@ -28,7 +33,12 @@ void Internal::learn_unit_clause (int lit) {
   int64_t id = ++clause_id;
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
-  if (proof) proof->add_derived_unit_clause (id, lit);
+  if (proof) {
+    if (opts.lratdirect) {
+      LOG (lrat_chain, "proof chain: ");
+      proof->add_derived_unit_clause (id, lit, lrat_chain);
+    } else proof->add_derived_unit_clause (id, lit);
+  }
   mark_fixed (lit);
 }
 
@@ -233,7 +243,15 @@ Internal::analyze_literal (int lit, int & open) {
   Flags & f = flags (lit);
   if (f.seen) return;
   Var & v = var (lit);
-  if (!v.level) return;
+  if (!v.level) {
+    if (!opts.lratdirect) return;
+    assert (val (lit) < 0);
+    const unsigned uidx = vlit (-lit);
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    lrat_chain.push_back (id);
+    return;
+  }
   assert (val (lit) < 0);
   assert (v.level <= level);
   if (v.level < level) clause.push_back (lit);
@@ -253,6 +271,7 @@ inline void
 Internal::analyze_reason (int lit, Clause * reason, int & open) {
   assert (reason);
   bump_clause (reason);
+  if (opts.lratdirect) lrat_chain.push_back (reason->id);
   for (const auto & other : *reason)
     if (other != lit)
       analyze_literal (other, open);
@@ -614,6 +633,7 @@ void Internal::analyze () {
   START (analyze);
 
   assert (conflict);
+  assert (lrat_chain.empty ());
 
   // First update moving averages of trail height at conflict.
   //
@@ -650,10 +670,27 @@ void Internal::analyze () {
       //
       backtrack (conflict_level - 1);
 
+      
+      // if we are on decision level 0 search assign will learn unit
+      // so we need a valid chain here (of course if we are not on decision
+      // level 0 this will not result in a valid chain.
+      if (opts.lratdirect) {
+        assert (lrat_chain.empty ());
+        for (auto & reason_lit : *conflict) {
+          assert (val (reason_lit) < 0);
+          const unsigned uidx = vlit (-reason_lit);
+          uint64_t id = unit_clauses[uidx];
+          // assert (id);                           see comment above (TODO: check validity)
+          lrat_chain.push_back (id);                // obviously this can occur
+        }                                           // and is buggy
+        lrat_chain.push_back (conflict->id);
+      }
+      
       LOG ("forcing %d", forced);
       search_assign_driving (forced, conflict);
 
       conflict = 0;
+      lrat_chain.clear ();
       STOP (analyze);
       return;
     }
@@ -673,9 +710,25 @@ void Internal::analyze () {
 
   // Actual conflict on root level, thus formula unsatisfiable.
   //
+  // TODO: this does not work. unit_clauses are not always filled
+  // so whenever they are used I actually need to find reasons
+  // (if they exist)
+  // 
   if (!level) {
+    if (opts.lratdirect) {
+      assert (lrat_chain.empty ());
+      for (const auto & lit : *conflict) {
+        assert (val (lit) < 0);
+        const unsigned uidx = vlit (-lit);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
+      }
+      lrat_chain.push_back (conflict->id);
+    }
     learn_empty_clause ();
     if (external->learner) external->export_learned_empty_clause ();
+    lrat_chain.clear ();
     STOP (analyze);
     return;
   }
@@ -699,7 +752,11 @@ void Internal::analyze () {
   LOG (reason, "analyzing conflict");
 
   assert (clause.empty ());
-
+  if (opts.lratdirect) {
+    assert (lrat_chain.empty ());
+    lrat_chain.push_back (conflict->id);
+  }
+    
   int i = trail.size ();        // Start at end-of-trail.
   int open = 0;                 // Seen but not processed on this level.
   int uip = 0;                  // The first UIP literal.
@@ -731,26 +788,35 @@ void Internal::analyze () {
   stats.learned.clauses++;
   assert (glue < size);
 
+  // TODO: lrat_chain should be the proof for current clause in reversed order.
+  // we can either continue with lrat_chain here and add clauses as needed during
+  // minimize and shrink or we add current clause to proof with lrat_chain
+  // and then think about what we need to do during minimize and shrink
+  // ie. compute new proof, add clause when we finally learn it for real
+  // then delete this clause.
+  // I will try first thing first because it sounds simpler (altough it might not be)
+  // I will definitely need to reverse lrat_chain later.
+  // See TODOs below...
 
   // Minimize the 1st UIP clause as pioneered by Niklas Soerensson in
   // MiniSAT and described in our joint SAT'09 paper.
   //
   if (size > 1) {
     if (opts.shrink)
-      shrink_and_minimize_clause();
+      shrink_and_minimize_clause ();               // TODO: lrat_chain in here -> disabled option
     else if (opts.minimize)
-      minimize_clause();
+      minimize_clause ();                          // TODO: lrat_chain in here -> done?
 
     size = (int) clause.size ();
 
     // Update decision heuristics.
     //
     if (opts.bump)
-      bump_variables();
+      bump_variables ();
 
     if (external->learner) external->export_learned_large_clause (clause);
   } else if (external->learner)
-    external->export_learned_unit_clause(-uip);
+    external->export_learned_unit_clause (-uip);
 
   // Update actual size statistics.
   //
@@ -758,11 +824,16 @@ void Internal::analyze () {
   stats.binaries += (size == 2);
   UPDATE_AVERAGE (averages.current.size, size);
 
+  // revese lrat_chain
+  if (opts.lratdirect) {
+    std::reverse (lrat_chain.begin (), lrat_chain.end ());
+  }
+  
   // Determine back-jump level, learn driving clause, backtrack and assign
   // flipped 1st UIP literal.
   //
   int jump;
-  Clause * driving_clause = new_driving_clause (glue, jump);
+  Clause * driving_clause = new_driving_clause (glue, jump); // TODO: lrat_chain
   UPDATE_AVERAGE (averages.current.jump, jump);
 
   int new_level = determine_actual_backtrack_level (jump);;
@@ -770,7 +841,7 @@ void Internal::analyze () {
   backtrack (new_level);
 
   if (uip) search_assign_driving (-uip, driving_clause);
-  else learn_empty_clause ();
+  else learn_empty_clause ();                             // TODO: lrat_chain??
 
   if (stable) reluctant.tick (); // Reluctant has its own 'conflict' counter.
 
@@ -781,6 +852,7 @@ void Internal::analyze () {
   clause.clear ();
   conflict = 0;
 
+  lrat_chain.clear ();
   STOP (analyze);
 
   if (driving_clause && opts.eagersubsume)

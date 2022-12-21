@@ -44,6 +44,23 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
   return res;
 }
 
+
+// careful. This will calculate chain even if unnecessary
+// TODO: change this to only be calculated at decision level 0
+// opts.chrono complicates this...
+inline void Internal::build_chain_for_units (Clause * reason) {
+  if (!opts.lratdirect) return;
+  assert (lrat_chain.empty ());
+  for (auto & lit : *reason) {
+    if (!val (lit)) continue;
+    // assert (val (lit) < 0);                  TODO: think about this
+    const unsigned uidx = vlit (val (lit) * lit);
+    uint64_t id = unit_clauses[uidx];
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (reason->id);
+}
+
 /*------------------------------------------------------------------------*/
 
 inline void Internal::search_assign (int lit, Clause * reason) {
@@ -197,7 +214,11 @@ bool Internal::propagate () {
         // there also only to simplify the code).
 
         if (b < 0) conflict = w.clause;          // but continue ...
-        else search_assign (w.blit, w.clause);
+        else {
+          build_chain_for_units (w.clause);
+          search_assign (w.blit, w.clause);
+          lrat_chain.clear ();
+        }
 
       } else {
 
@@ -287,7 +308,9 @@ bool Internal::propagate () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
+            build_chain_for_units (w.clause);
             search_assign (other, w.clause);
+            lrat_chain.clear ();
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code

@@ -16,9 +16,15 @@ namespace CaDiCaL {
 
 bool Internal::minimize_literal (int lit, int depth) {
   LOG("attempt to minimize lit %d at depth %d", lit, depth);
-  assert(val(lit) > 0);
+  assert(val (lit) > 0);
   Flags & f = flags (lit);
   Var & v = var (lit);
+  if (!v.level && opts.lratdirect) {
+    const unsigned uidx = vlit (lit);
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    mini_chain.push_back (id);
+  }
   if (!v.level || f.removable || f.keep) return true;
   if (!v.reason || f.poison || v.level == level) return false;
   const Level & l = control[v.level];
@@ -34,9 +40,28 @@ bool Internal::minimize_literal (int lit, int depth) {
     if (other == lit) continue;
     res = minimize_literal (-other, depth + 1);
   }
-  if (res) f.removable = true; else f.poison = true;
-  minimized.push_back (lit);
-  if (!depth) LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
+  if (res) {
+    f.removable = true;
+    if (opts.lratdirect) {
+      mini_chain.push_back (v.reason->id);
+    }
+  }
+  else {
+    f.poison = true;
+    if (opts.lratdirect) {                // TODO: is this sound when
+      mini_chain.clear ();                // a literal gets visited
+    }                                     // multiple times for different
+  }                                       // reasons? f.removable could be
+  minimized.push_back (lit);              // true but reason not in mini_chain?
+  if (!depth) {
+    LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
+    if (opts.lratdirect) {
+      for (auto p = mini_chain.end () - 1; p >= mini_chain.begin (); p--) {
+        lrat_chain.push_back (*p);
+      }
+      mini_chain.clear ();
+    }
+  }
   return res;
 }
 

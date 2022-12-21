@@ -308,7 +308,6 @@ void Options::disable_non_lrat () {
     if (!(T)) break; \
     if (!(N)) break; \
     assert ((L) == 0); \
-    assert ((H) == 1); \
     LOG ("lratplain mode disables '%s'", #N); \
     count++; \
     N = 0; \

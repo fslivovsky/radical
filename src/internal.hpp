@@ -163,6 +163,7 @@ struct Internal {
   uint64_t conflict_id;         // store conflict id for finalize (frat)
   vector<uint64_t> unit_clauses;// keep track of unit_clauses (lrat/frat)
   vector<uint64_t> lrat_chain;  // create lrat in solver: option lratdirect
+  vector<uint64_t> mini_chain;  // used to create lrat in minimize
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
@@ -537,6 +538,7 @@ struct Internal {
   // Forward reasoning through propagation in 'propagate.cpp'.
   //
   int assignment_level (int lit, Clause*);
+  void build_chain_for_units (Clause * reason);
   void search_assign (int lit, Clause *);
   void search_assign_driving (int lit, Clause * reason);
   void search_assume_decision (int decision);

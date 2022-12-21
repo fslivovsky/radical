@@ -404,7 +404,12 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
 #endif
   external->check_learned_clause ();
   Clause * res = new_clause (true, glue);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) {
+    if (opts.lratdirect) {
+      LOG (lrat_chain, "proof chain: ");
+      proof->add_derived_clause (res, lrat_chain);
+    } else proof->add_derived_clause (res);
+  }
   assert (watching ());
   watch_clause (res);
   return res;

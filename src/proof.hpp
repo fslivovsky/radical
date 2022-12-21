@@ -64,6 +64,8 @@ public:
   void add_derived_clause (Clause *);
   void add_derived_clause (uint64_t, const vector<int> &);
 
+  void add_derived_empty_clause (uint64_t, const vector<uint64_t> &);
+  void add_derived_unit_clause (uint64_t, int unit, const vector<uint64_t> &);
   void add_derived_clause (Clause * c, const vector<uint64_t> &);
   void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t> &);
   

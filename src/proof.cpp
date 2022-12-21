@@ -18,7 +18,7 @@ void Internal::new_proof_on_demand () {
 
 void Internal::build_full_lrat () {
   // if (lratbuilder) return;
-  assert (!lratbuilder);                              // 99% sure this is correct
+  assert (!lratbuilder);                            // 99% sure this is correct
   if (opts.lrat && !opts.lratfratpartial) {
     lratbuilder = new LratBuilder (this);
     LOG ("PROOF connecting lrat proof chain builder");
@@ -111,6 +111,27 @@ void Proof::add_derived_unit_clause (uint64_t id, int internal_unit) {
   LOG ("PROOF adding unit clause %d", internal_unit);
   assert (clause.empty ());
   add_literal (internal_unit);
+  clause_id = id;
+  add_derived_clause ();
+}
+
+void Proof::add_derived_empty_clause (uint64_t id, const vector<uint64_t> & chain) {
+  LOG ("PROOF adding empty clause");
+  assert (clause.empty ());
+  assert (proof_chain.empty ());
+  for (const auto & cid : chain)
+    proof_chain.push_back (cid);
+  clause_id = id;
+  add_derived_clause ();
+}
+
+void Proof::add_derived_unit_clause (uint64_t id, int internal_unit, const vector<uint64_t> & chain) {
+  LOG ("PROOF adding unit clause %d", internal_unit);
+  assert (proof_chain.empty ());
+  assert (clause.empty ());
+  add_literal (internal_unit);
+  for (const auto & cid : chain)
+    proof_chain.push_back (cid);
   clause_id = id;
   add_derived_clause ();
 }
@@ -272,7 +293,8 @@ void Proof::add_original_clause () {
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
   assert (clause_id);
-  if (lratbuilder) {
+  if (internal->opts.lrat) assert (!proof_chain.empty ());  // TODO: this is only for now
+  if (lratbuilder) {                                        // remove later
     if (proof_chain.empty ())
       proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
     else {

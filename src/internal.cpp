@@ -713,7 +713,6 @@ void Internal::finalize () {
     proof->finalize_unit (id, lit);
   }
   // See the discussion in 'propagate' on why garbage binary clauses stick around.
-  // maybe the discussion is only in fradical TODO: check thats
   for (const auto & c : clauses)
     if (!c->garbage || c->size == 2) proof->finalize_clause (c);
 }
