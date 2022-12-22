@@ -308,6 +308,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   mark_fixed (lit);
   if (propagate ()) return;
   LOG ("propagation of original unit results in conflict");
+  build_chain_for_units (conflict);
   learn_empty_clause ();
 }
 
@@ -368,6 +369,7 @@ void Internal::add_new_original_clause (uint64_t id) {
         proof->delete_clause (id, original);
       }
     }
+    lrat_chain.clear ();
     if (!size) {
       if (!unsat) {
         if (!original.size ()) VERBOSE (1, "found empty original clause");
