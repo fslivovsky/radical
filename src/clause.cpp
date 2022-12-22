@@ -308,7 +308,7 @@ void Internal::assign_original_unit (uint64_t id, int lit) {
   mark_fixed (lit);
   if (propagate ()) return;
   LOG ("propagation of original unit results in conflict");
-  build_chain_for_units (conflict);
+  build_chain_for_units (lit, conflict);
   learn_empty_clause ();
 }
 

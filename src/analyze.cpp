@@ -752,11 +752,8 @@ void Internal::analyze () {
   LOG (reason, "analyzing conflict");
 
   assert (clause.empty ());
-  if (opts.lratdirect) {
-    assert (lrat_chain.empty ());
-    lrat_chain.push_back (conflict->id);
-  }
-    
+  assert (lrat_chain.empty ());
+
   int i = trail.size ();        // Start at end-of-trail.
   int open = 0;                 // Seen but not processed on this level.
   int uip = 0;                  // The first UIP literal.

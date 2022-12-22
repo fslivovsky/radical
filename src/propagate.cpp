@@ -45,16 +45,17 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
 }
 
 
-// careful. This will calculate chain even if unnecessary
-// TODO: change this to only be calculated at decision level 0
-// opts.chrono complicates this...
-inline void Internal::build_chain_for_units (Clause * reason) {
+// calculate lrat_chain
+inline void Internal::build_chain_for_units (int lit, Clause * reason) {
   if (!opts.lratdirect) return;
+  if (opts.chrono && assignment_level (lit, reason)) return;
+  if (level) return;   // not decision level 0
   assert (lrat_chain.empty ());
-  for (auto & lit : *reason) {
-    if (!val (lit)) continue;
-    // assert (val (lit) < 0);                  TODO: think about this
-    const unsigned uidx = vlit (val (lit) * lit);
+  for (auto & reason_lit : *reason) {
+    if (lit == reason_lit) continue;
+    assert (val (reason_lit));
+    if (!val (reason_lit)) continue;
+    const unsigned uidx = vlit (val (reason_lit) * reason_lit);
     uint64_t id = unit_clauses[uidx];
     lrat_chain.push_back (id);
   }
@@ -215,7 +216,7 @@ bool Internal::propagate () {
 
         if (b < 0) conflict = w.clause;          // but continue ...
         else {
-          build_chain_for_units (w.clause);
+          build_chain_for_units (w.blit, w.clause);
           search_assign (w.blit, w.clause);
           lrat_chain.clear ();
         }
@@ -308,7 +309,7 @@ bool Internal::propagate () {
             // The other watch is unassigned ('!u') and all other literals
             // assigned to false (still 'v < 0'), thus we found a unit.
             //
-            build_chain_for_units (w.clause);
+            build_chain_for_units (other, w.clause);
             search_assign (other, w.clause);
             lrat_chain.clear ();
 
