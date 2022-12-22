@@ -240,9 +240,16 @@ void Proof::flush_clause (Clause * c) {
   assert (clause.empty ());
   for (int i = 0; i < c->size; i++) {
     int internal_lit = c->literals[i];
-    if (internal->fixed (internal_lit) < 0) continue;
+    if (internal->fixed (internal_lit) < 0) {
+      const unsigned uidx = internal->vlit (-internal_lit);
+      uint64_t id = internal->unit_clauses[uidx];
+      assert (id);
+      proof_chain.push_back (id);
+      continue;
+    }
     add_literal (internal_lit);
   }
+  proof_chain.push_back (c->id);
   int64_t id = ++internal->clause_id;
   clause_id = id;
   add_derived_clause ();
@@ -255,6 +262,7 @@ void Proof::flush_clause (Clause * c) {
 // have to remove exactly one literal.  Again the following function allows
 // to avoid copying the clause and instead provides tracing of the required
 // 'add' and 'remove' operations.
+// TODO: proof_chain...
 
 void Proof::strengthen_clause (Clause * c, int remove) {
   LOG (c, "PROOF strengthen by removing %d in", remove);
