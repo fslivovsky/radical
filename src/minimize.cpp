@@ -55,9 +55,9 @@ bool Internal::minimize_literal (int lit, int depth) {
   minimized.push_back (lit);              // true but reason not in mini_chain?
   if (!depth) {
     LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
-    if (opts.lratdirect) {
-      for (auto p = mini_chain.end () - 1; p >= mini_chain.begin (); p--) {
-        lrat_chain.push_back (*p);
+    if (opts.lratdirect && !mini_chain.empty ()) {
+      for (auto p : mini_chain) { //= mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+        minimize_chain.push_back (p);
       }
       mini_chain.clear ();
     }
@@ -92,9 +92,10 @@ void Internal::minimize_clause () {
   LOG (clause, "minimizing first UIP clause");
 
   external->check_learned_clause (); // check 1st UIP learned clause first
-  minimize_sort_clause();
+  minimize_sort_clause ();
 
   assert (minimized.empty ());
+  assert (minimize_chain.empty ());
   const auto end = clause.end ();
   auto j = clause.begin (), i = j;
   for (; i != end; i++)
@@ -103,6 +104,10 @@ void Internal::minimize_clause () {
   LOG ("minimized %zd literals", (size_t)(clause.end () - j));
   if (j != end) clause.resize (j - clause.begin ());
   clear_minimized_literals ();
+  for (auto p = minimize_chain.rbegin (); p < minimize_chain.rend (); p++) {
+    lrat_chain.push_back (*p);
+  }
+  minimize_chain.clear ();
   STOP (minimize);
 }
 

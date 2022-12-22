@@ -164,6 +164,7 @@ struct Internal {
   vector<uint64_t> unit_clauses;// keep track of unit_clauses (lrat/frat)
   vector<uint64_t> lrat_chain;  // create lrat in solver: option lratdirect
   vector<uint64_t> mini_chain;  // used to create lrat in minimize
+  vector<uint64_t> minimize_chain; // used to create lrat in minimize 
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
