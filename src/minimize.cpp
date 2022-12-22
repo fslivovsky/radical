@@ -47,7 +47,7 @@ bool Internal::minimize_literal (int lit, int depth) {
     }
   }
   else {
-    f.poison = true;
+    f.poison = true;                      // pretty sure bug in reg-cnf-lrat-03.cnf is this:
     if (opts.lratdirect) {                // TODO: is this sound when
       mini_chain.clear ();                // a literal gets visited
     }                                     // multiple times for different
