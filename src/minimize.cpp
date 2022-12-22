@@ -40,13 +40,13 @@ bool Internal::minimize_literal (int lit, int depth) {
     if (other == lit) continue;
     res = minimize_literal (-other, depth + 1);
   }
-  if (res) {
-    f.removable = true;
-    if (opts.lratdirect) {
-      mini_chain.push_back (v.reason->id);
-    }
-  }
-  else {
+  if (res) {                                            // possible fix:
+    f.removable = true;                             // for each literal that we minimize here
+    if (opts.lratdirect) {                       // if f.removable is set to true
+      mini_chain.push_back (v.reason->id);     // we need a valid proof_chain (of ids) connecting
+    }                                        // this literal to a conflict (we can just take what we have
+  }                                      // in mini_chain). when we get to a literal where f.removable is
+  else {                              // set (line 28) we need to add the chain we have saved for this literal
     f.poison = true;                      // pretty sure bug in reg-cnf-lrat-03.cnf is this:
     if (opts.lratdirect) {                // TODO: is this sound when
       mini_chain.clear ();                // a literal gets visited
