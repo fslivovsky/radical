@@ -556,6 +556,7 @@ struct Internal {
   //
   bool minimize_literal (int lit, int depth = 0);
   void minimize_clause ();
+  void calculate_minimize_chain (int lit);
 
   // Learning from conflicts in 'analyze.cc'.
   //

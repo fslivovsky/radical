@@ -19,12 +19,6 @@ bool Internal::minimize_literal (int lit, int depth) {
   assert(val (lit) > 0);
   Flags & f = flags (lit);
   Var & v = var (lit);
-  if (!v.level && opts.lratdirect) {
-    const unsigned uidx = vlit (lit);
-    uint64_t id = unit_clauses[uidx];
-    assert (id);
-    mini_chain.push_back (id);
-  }
   if (!v.level || f.removable || f.keep) return true;
   if (!v.reason || f.poison || v.level == level) return false;
   const Level & l = control[v.level];
@@ -40,27 +34,11 @@ bool Internal::minimize_literal (int lit, int depth) {
     if (other == lit) continue;
     res = minimize_literal (-other, depth + 1);
   }
-  if (res) {                                            // possible fix:
-    f.removable = true;                             // for each literal that we minimize here
-    if (opts.lratdirect) {                       // if f.removable is set to true
-      mini_chain.push_back (v.reason->id);     // we need a valid proof_chain (of ids) connecting
-    }                                        // this literal to a conflict (we can just take what we have
-  }                                      // in mini_chain). when we get to a literal where f.removable is
-  else {                              // set (line 28) we need to add the chain we have saved for this literal
-    f.poison = true;                      // pretty sure bug in reg-cnf-lrat-03.cnf is this:
-    if (opts.lratdirect) {                // TODO: is this sound when
-      mini_chain.clear ();                // a literal gets visited
-    }                                     // multiple times for different
-  }                                       // reasons? f.removable could be
-  minimized.push_back (lit);              // true but reason not in mini_chain?
+  if (res) f.removable = true;
+  else f.poison = true;                                        
+  minimized.push_back (lit);     
   if (!depth) {
     LOG ("minimizing %d %s", lit, res ? "succeeded" : "failed");
-    if (opts.lratdirect && !mini_chain.empty ()) {
-      for (auto p : mini_chain) { //= mini_chain.rbegin (); p < mini_chain.rend (); p++) {
-        minimize_chain.push_back (p);
-      }
-      mini_chain.clear ();
-    }
   }
   return res;
 }
@@ -98,9 +76,20 @@ void Internal::minimize_clause () {
   assert (minimize_chain.empty ());
   const auto end = clause.end ();
   auto j = clause.begin (), i = j;
-  for (; i != end; i++)
-    if (minimize_literal (-*i)) stats.minimized++;
+  for (; i != end; i++) {
+    if (minimize_literal (-*i)) {
+      if (opts.lratdirect) {
+        assert (mini_chain.empty ());
+        calculate_minimize_chain (-*i);
+        for (auto p : mini_chain) {
+          minimize_chain.push_back (p);
+        }
+        mini_chain.clear ();
+      }
+      stats.minimized++;
+    }
     else flags (*j++ = *i).keep = true;
+  }
   LOG ("minimized %zd literals", (size_t)(clause.end () - j));
   if (j != end) clause.resize (j - clause.begin ());
   clear_minimized_literals ();
@@ -109,6 +98,35 @@ void Internal::minimize_clause () {
   }
   minimize_chain.clear ();
   STOP (minimize);
+}
+
+// go backwards in reason graph and add ids
+// mini_chain is in correct order so we have to add it to minimize_chain
+// and then reverse when we put it on lrat_chain
+void Internal::calculate_minimize_chain (int lit) {
+  assert(val (lit) > 0);
+  Flags & f = flags (lit);
+  Var & v = var (lit);
+  assert (!v.level || f.removable || f.keep);
+  if (f.keep || f.added) return;
+  f.added = true;
+  if (!v.level) {
+    minimized.push_back (lit);                     // actually go a bug becaus
+    const unsigned uidx = vlit (lit);              // I didn't clean added flag
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    mini_chain.push_back (id);
+    return;
+  }
+  assert (v.reason && f.removable);
+  const const_literal_iterator end = v.reason->end ();
+  const_literal_iterator i;
+  for (i = v.reason->begin (); i != end; i++) {
+    const int other = *i;
+    if (other == lit) continue;
+    calculate_minimize_chain (-other);
+  }
+  mini_chain.push_back (v.reason->id);
 }
 
 // Sort the literals in reverse assignment order (thus trail order) to
@@ -124,10 +142,10 @@ void Internal::clear_minimized_literals () {
   LOG ("clearing %zd minimized literals", minimized.size ());
   for (const auto & lit : minimized) {
     Flags & f = flags (lit);
-    f.poison = f.removable = f.shrinkable = false;
+    f.poison = f.removable = f.shrinkable = f.added = false;
   }
   for (const auto & lit : clause)
-    assert(!flags(lit).shrinkable), flags(lit).keep = flags(lit).shrinkable = false;
+    assert(!flags(lit).shrinkable), flags(lit).keep = flags(lit).shrinkable = flags(lit).added = false;
   minimized.clear ();
 }
 
