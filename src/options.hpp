@@ -104,8 +104,8 @@ OPTION( instantiateocclim, 1,  1,2e9,2,0,0,1, "maximum occurrence limit") \
 OPTION( instantiateonce,   1,  0,  1,0,0,0,1, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1,0,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0,0, "sort logged clauses") \
-OPTION( lrat,              0,  0,  1,0,0,0,1, "use lrat proof format") \
-OPTION( lratdirect,        1,  0,  1,0,0,0,1, "direct lrat wherever possible") \
+OPTION( lrat,              1,  1,  1,0,0,0,1, "use lrat proof format") \
+OPTION( lratdirect,        1,  1,  1,0,0,0,1, "direct lrat wherever possible") \
 OPTION( lratdirectcompare, 0,  0,  1,0,0,0,1, "compare direct lrat vs lratbuilder") \
 OPTION( lratfrat,          0,  0,  1,0,0,0,1, "use frat proof format") \
 OPTION( lratfratpartial,   0,  0,  1,0,0,0,1, "do not use lratbuilder") \
