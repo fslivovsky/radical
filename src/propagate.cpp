@@ -46,6 +46,8 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
 
 
 // calculate lrat_chain
+// inlined because mostly called inside of propagate
+//
 inline void Internal::build_chain_for_units (int lit, Clause * reason) {
   if (!opts.lratdirect) return;
   LOG ("building chain for units");
@@ -61,6 +63,24 @@ inline void Internal::build_chain_for_units (int lit, Clause * reason) {
     lrat_chain.push_back (id);
   }
   lrat_chain.push_back (reason->id);
+}
+
+// same code as above but reason is assumed to be conflict and lit is not needed
+// also not inlined as it is not called inside of propagate.
+//
+void Internal::build_chain_for_empty () {
+  if (!opts.lratdirect) return;
+  LOG (conflict, "lrat for global empty clause with conflict");
+  assert (conflict);
+  assert (!level);
+  assert (lrat_chain.empty ());
+  for (auto & lit : *conflict) {
+    assert (val (lit) < 0);
+    const unsigned uidx = vlit (-lit);
+    uint64_t id = unit_clauses[uidx];
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (conflict->id);
 }
 
 /*------------------------------------------------------------------------*/

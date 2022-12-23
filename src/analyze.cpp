@@ -675,21 +675,9 @@ void Internal::analyze () {
       // so we need a valid chain here (of course if we are not on decision
       // level 0 this will not result in a valid chain.
       // we can just use build_chain_for_units in propagate
-
+      //
       build_chain_for_units (forced, conflict);
-      /*
-      if (opts.lratdirect) {
-        assert (lrat_chain.empty ());
-        for (auto & reason_lit : *conflict) {
-          assert (val (reason_lit) < 0);
-          const unsigned uidx = vlit (-reason_lit);
-          uint64_t id = unit_clauses[uidx];
-          // assert (id);                           see comment above (TODO: check validity)
-          lrat_chain.push_back (id);                // obviously this can occur
-        }                                           // and is buggy
-        lrat_chain.push_back (conflict->id);
-      }
-      */
+
       LOG ("forcing %d", forced);
       search_assign_driving (forced, conflict);
 
@@ -715,17 +703,7 @@ void Internal::analyze () {
   // Actual conflict on root level, thus formula unsatisfiable.
   //
   if (!level) {
-    if (opts.lratdirect) {
-      assert (lrat_chain.empty ());
-      for (const auto & lit : *conflict) {
-        assert (val (lit) < 0);
-        const unsigned uidx = vlit (-lit);
-        uint64_t id = unit_clauses[uidx];
-        assert (id);
-        lrat_chain.push_back (id);
-      }
-      lrat_chain.push_back (conflict->id);
-    }
+    build_chain_for_empty ();
     learn_empty_clause ();
     if (external->learner) external->export_learned_empty_clause ();
     lrat_chain.clear ();
