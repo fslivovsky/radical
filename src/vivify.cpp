@@ -488,11 +488,15 @@ void Internal::vivify_strengthen (Clause * c) {
     const int unit = clause[0];
     LOG (c, "vivification shrunken to unit %d", unit);
     assert (!val (unit));
-    assign_unit (unit);
+    assign_unit (unit);             // TODO: lrat_chain
     stats.vivifyunits++;
 
     bool ok = propagate ();
-    if (!ok) learn_empty_clause ();
+    if (!ok) {
+      build_chain_for_empty ();
+      learn_empty_clause ();
+      lrat_chain.clear ();
+    }
 
   } else {
 
@@ -970,7 +974,9 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
   if (!unsat && !propagate ()) {
     LOG ("propagation after connecting watches in inconsistency");
+    build_chain_for_empty ();
     learn_empty_clause ();
+    lrat_chain.clear ();
   }
 
   while (!unsat &&
@@ -1026,7 +1032,9 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
     if (!propagate ()) {
       LOG ("propagating vivified units leads to conflict");
+      build_chain_for_empty ();
       learn_empty_clause ();
+      lrat_chain.clear ();
     }
   }
 
