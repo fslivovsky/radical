@@ -763,24 +763,21 @@ void Internal::analyze () {
   stats.learned.clauses++;
   assert (glue < size);
 
-  // TODO: lrat_chain should be the proof for current clause in reversed order.
-  // we can either continue with lrat_chain here and add clauses as needed during
-  // minimize and shrink or we add current clause to proof with lrat_chain
-  // and then think about what we need to do during minimize and shrink
-  // ie. compute new proof, add clause when we finally learn it for real
-  // then delete this clause.
-  // I will try first thing first because it sounds simpler (altough it might not be)
-  // I will definitely need to reverse lrat_chain later.
-  // See TODOs below...
+  // up to this point lrat_chain contains the proof for current clause in reversed order.
+  // in minimize and shrink the clause is changed and therefore lrat_chain
+  // has to be extended. Unfortunately we cannot create the chain directly
+  // during minimazation (or shrinking) but afterwards we can calculate it
+  // pretty easily and even better the same algorithm works for both shrinking
+  // and minimization.
 
   // Minimize the 1st UIP clause as pioneered by Niklas Soerensson in
   // MiniSAT and described in our joint SAT'09 paper.
   //
   if (size > 1) {
     if (opts.shrink)
-      shrink_and_minimize_clause ();               // TODO: lrat_chain in here -> disabled option
+      shrink_and_minimize_clause ();
     else if (opts.minimize)
-      minimize_clause ();                          // TODO: lrat_chain in here -> done?
+      minimize_clause ();
 
     size = (int) clause.size ();
 
@@ -799,7 +796,9 @@ void Internal::analyze () {
   stats.binaries += (size == 2);
   UPDATE_AVERAGE (averages.current.size, size);
 
-  // revese lrat_chain
+  // reverse lrat_chain. We could probably work with reversed iterators (views)
+  // to be more efficient but we would have to distinguish in proof
+  //
   if (opts.lratdirect) {
     std::reverse (lrat_chain.begin (), lrat_chain.end ());
   }
@@ -808,15 +807,22 @@ void Internal::analyze () {
   // flipped 1st UIP literal.
   //
   int jump;
-  Clause * driving_clause = new_driving_clause (glue, jump); // TODO: lrat_chain
+  Clause * driving_clause = new_driving_clause (glue, jump);
   UPDATE_AVERAGE (averages.current.jump, jump);
 
   int new_level = determine_actual_backtrack_level (jump);;
   UPDATE_AVERAGE (averages.current.level, new_level);
   backtrack (new_level);
 
+  // It should hold that (!level <=> size == 1)
+  //                 and (!uip   <=> size == 0)
+  // this means either we have already learned a clause => size >= 2
+  // in this case we will not learn empty clause or unit here
+  // or we haven't actually learned a clause in new_driving_clause
+  // then lrat_chain is still valid and we will learn a unit or empty clause
+  //
   if (uip) search_assign_driving (-uip, driving_clause);
-  else learn_empty_clause ();                             // TODO: lrat_chain??
+  else learn_empty_clause ();
 
   if (stable) reluctant.tick (); // Reluctant has its own 'conflict' counter.
 

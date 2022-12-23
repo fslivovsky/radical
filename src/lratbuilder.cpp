@@ -60,7 +60,7 @@ LratBuilderClause * LratBuilder::new_clause () {
   int * literals = res->literals, * p = literals;
   for (const auto & lit : simplified)
     *p++ = lit;
-  
+
   if (size == 0) {
     return res;
   }
@@ -83,7 +83,7 @@ LratBuilderClause * LratBuilder::new_clause () {
       break;
     }
   }
-  
+
   // make sure the clause is not tautological
   if (!new_clause_taut) {
     watcher (literals[0]).push_back (LratBuilderWatch (literals[1], res));
@@ -258,7 +258,7 @@ void LratBuilder::enlarge_vars (int64_t idx) {
   vals -= size_vars;
   delete [] vals;
   vals = new_vals;
-  
+
   reasons.resize (new_size_vars);
   unit_reasons.resize (new_size_vars);
   justified.resize (new_size_vars);
@@ -270,11 +270,11 @@ void LratBuilder::enlarge_vars (int64_t idx) {
     justified[i] = 0;
     todo_justify[i] = 0;
   }
-  
+
   watchers.resize (2*new_size_vars);
   marks.resize (2*new_size_vars);
   checked_lits.resize (2*new_size_vars);
-  
+
   assert (idx < new_size_vars);
   size_vars = new_size_vars;
 }
@@ -464,12 +464,12 @@ bool LratBuilder::propagate () {
         }
         else assign_reason (w.blit, w.clause);
       }
-      else if (size == 2) {                          
+      else if (size == 2) {
         if (blit_val < 0) {
           res = false;
           conflict = w.clause;
         }
-        else assign_reason (w.blit, w.clause); 
+        else assign_reason (w.blit, w.clause);
       } else {
         assert (size > 2);
         LratBuilderClause * c = w.clause;
@@ -565,7 +565,7 @@ void LratBuilder::proof_inconsistent_clause () {
     }
     return;
   }
-  
+
   unjustified = inconsistent_clause->size;   // is always > 0 if we have work to do
   const int* end = inconsistent_clause->literals + inconsistent_clause->size;
   for (int * i = inconsistent_clause->literals; i < end; i++) {
@@ -598,7 +598,7 @@ void LratBuilder::proof_clause () {
 
 bool LratBuilder::build_chain_if_possible () {
   stats.checks++;
-  
+
   chain.clear ();
 
   if (new_clause_taut) {
@@ -634,7 +634,7 @@ bool LratBuilder::build_chain_if_possible () {
     next_to_propagate = previously_propagated;
     return false;
   }
-  
+
   proof_clause ();
 
   backtrack (previous_trail_size);
@@ -688,11 +688,11 @@ void LratBuilder::add_clause (const char * type) {
   } else if (sat) {
     LOG ("LRAT BUILDER added and checked satisfied %s clause", type);
   } else if (!unit) {
-    LOG ("LRAT BUILDER added and checked falsified %s clause with id %" PRIu64, type, c->id);    
+    LOG ("LRAT BUILDER added and checked falsified %s clause with id %" PRIu64, type, c->id);
     inconsistent = true;
     inconsistent_clause = c;
   } else if (unit == INT_MIN) {
-    LOG ("LRAT BUILDER added and checked non unit %s clause", type);    
+    LOG ("LRAT BUILDER added and checked non unit %s clause", type);
   } else {
     stats.units++;
     LOG ("LRAT BUILDER checked and assigned %s unit clause %d", type, unit);
@@ -775,12 +775,13 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
   import_clause (c);
   last_id = id;
   tautological ();
-  LratBuilderClause ** p = find (id), * d = *p;          // TODO: again should not
-  if (d) {                                               // check the literals
-    for (const auto & lit : simplified) mark (lit) = true; // (only in debugging)
+  LratBuilderClause ** p = find (id), * d = *p;
+  if (d) {
+    // TODO: marks should only be defined and used in debugging mode
+    for (const auto & lit : simplified) mark (lit) = true;
     int unit = 0;
-    const int * dp = d->literals;               // d should have the same literals
-    for (unsigned i = 0; i < d->size; i++) {    // as simplified if the code is not buggy
+    const int * dp = d->literals;
+    for (unsigned i = 0; i < d->size; i++) {
       int lit = *(dp + i);
       assert (mark (lit));
       LratBuilderClause * reason = reasons[l2a (lit)];
@@ -794,7 +795,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
       }
     }
     for (const auto & lit : simplified) mark (lit) = false;
-    
+
     // Remove from hash table, mark as garbage, connect to garbage list.
     num_garbage++;
     assert (num_clauses);
@@ -803,7 +804,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
     d->next = garbage;
     garbage = d;
     d->garbage = true;
-    
+
     if (d->size == 1) {
       unsigned l = l2a (d->literals[0]);
       if (unit_reasons[l] == d) {
@@ -811,17 +812,22 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
       }
     }
 
+    // we propagated unit with the deleted clause as reason. To ensure
+    // topological order of the trail we have to backtrack (and repropagate)
+    // usually unit should be implied by some other clause otherwise deleting
+    // this clause does not really makes sense.
+    //
     if (unit) {
       LOG (trail.begin (), trail.end (), "LRAT BUILDER propagated lits before deletion");
-      while (trail.size ()) {      // backtracking in trail until we hit
-        int tlit = trail.back ();  // the right lit.
-        if (tlit == unit) break;    // this is needed to make sure the
-        unassign_reason (tlit);    // trail is always a topological order
-        trail.pop_back ();         // for the reason graph
-      }                            // alternatively we could ignore the
-      assert (trail.size ());      // trail while building the lrat proof
-      unassign_reason (unit);       // I don't know which is better or if
-      trail.pop_back ();           // I missed some other solution.
+      while (trail.size ()) {
+        int tlit = trail.back ();
+        if (tlit == unit) break;
+        unassign_reason (tlit);
+        trail.pop_back ();
+      }
+      assert (trail.size ());
+      unassign_reason (unit);
+      trail.pop_back ();
     }
     if (unit || (inconsistent && inconsistent_clause->id == d->id)) {
       inconsistent_chain.clear ();
@@ -838,7 +844,7 @@ void LratBuilder::delete_clause (uint64_t id, const vector<int> & c) {
         LOG ("LRAT BUILDER no longer inconsistent after deletion of clause %" PRIu64, d->id);
       }
     }
-    
+
     // If there are enough garbage clauses collect them.
     if (num_garbage > 0.5 * max ((size_t) size_clauses, (size_t) size_vars))
       collect_garbage_clauses ();
