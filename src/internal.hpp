@@ -708,6 +708,7 @@ struct Internal {
   void flush_vivification_schedule (Vivifier &);
   bool consider_to_vivify_clause (Clause * candidate, bool redundant_mode);
   void vivify_analyze_redundant (Vivifier &, Clause * start, bool &);
+  void vivify_build_lrat_in_remove_case (int, Clause *);
   bool vivify_all_decisions (Clause * candidate, int subsume);
   void vivify_post_process_analysis (Clause * candidate, int subsume);
   void vivify_strengthen (Clause * candidate);

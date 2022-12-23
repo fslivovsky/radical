@@ -96,7 +96,11 @@ bool Internal::vivify_propagate () {
         const signed char b = val (w.blit);
         if (b > 0) continue;
         if (b < 0) conflict = w.clause;                 // but continue
-        else vivify_assign (w.blit, w.clause);
+        else {
+          build_chain_for_units (w.blit, w.clause);
+          vivify_assign (w.blit, w.clause);
+          lrat_chain.clear ();
+        }
       }
     } else if (!conflict && propagated != trail.size ()) {
       const int lit = -trail[propagated++];
@@ -142,7 +146,9 @@ bool Internal::vivify_propagate () {
             j--;
           } else if (!u) {
             assert (v < 0);
+            build_chain_for_units (other, w.clause);
             vivify_assign (other, w.clause);
+            lrat_chain.clear ();
           } else {
             assert (u < 0);
             assert (v < 0);
@@ -353,7 +359,8 @@ bool Internal::consider_to_vivify_clause (Clause * c,
 }
 
 // Conflict analysis from 'start' which learns a decision only clause.
-
+// we need to build lrat_chain along analyze
+//
 void Internal::vivify_analyze_redundant (Vivifier & vivifier,
                                          Clause * start,
                                          bool & only_binary_reasons)
@@ -366,6 +373,8 @@ void Internal::vivify_analyze_redundant (Vivifier & vivifier,
   stack.clear ();
 
   stack.push_back (start);
+  if (opts.lratdirect)
+    lrat_chain.push_back (start->id);
   while (!stack.empty ()) {
     Clause * c = stack.back ();
     if (c->size > 2) only_binary_reasons = false;
@@ -373,13 +382,26 @@ void Internal::vivify_analyze_redundant (Vivifier & vivifier,
     LOG (c, "vivify analyze");
     for (const auto & lit : *c) {
       Var & v = var (lit);
-      if (!v.level) continue;
+      if (!v.level) {
+        // -lit is a unit so we can find id in unit_clauses
+        if (!opts.lratdirect) continue;
+        assert (val (lit) < 0);
+        const unsigned uidx = vlit (-lit);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
+        continue;
+      }
       Flags & f = flags (lit);
       if (f.seen) continue;
       assert (val (lit) < 0);
       f.seen = true;
       analyzed.push_back (lit);
-      if (v.reason) stack.push_back (v.reason);
+      if (v.reason) {
+        stack.push_back (v.reason);
+        if (!opts.lratdirect) continue;
+        lrat_chain.push_back (v.reason->id);
+      }
       else LOG ("vivify seen %d", lit);
     }
   }
@@ -531,7 +553,7 @@ void Internal::vivify_strengthen (Clause * c) {
              val (lit1) < 0 &&
              var (lit0).level <= var (lit1).level));
 
-    Clause * d = new_clause_as (c);
+    Clause * d = new_clause_as (c);                   // TODO: lrat_chain
     LOG (c, "before vivification");
     LOG (d, "after vivification");
     (void) d;
@@ -798,6 +820,10 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
       if (!clause.empty ()) {
 
         LOG ("strengthening instead of subsuming clause");
+        if (opts.lratdirect) {
+          assert (lrat_chain.size ());
+          std::reverse (lrat_chain.begin (), lrat_chain.end ());   // again, reverse...
+        }
         vivify_strengthen (c);
 
       } else {  // triggered by '@7'
@@ -838,6 +864,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 
     assert (level);
     assert (clause.empty ());
+    assert (lrat_chain.empty ());
 
     // There might be other literals implied to false (or even root level
     // falsified).  Those should be removed in addition to 'remove'.
@@ -845,11 +872,23 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     for (const auto & other : *c) {
       assert (val (other) < 0);
       Var & v = var (other);
-      if (!v.level) continue; // Remove root-level fixed literals.
-      if (v.reason) {         // Remove all negative implied literals.
+      if (!v.level) {                  // Remove root-level fixed literals. 
+        if (!opts.lratdirect) continue;
+        Flags & f = flags (other);
+        f.seen = true;
+        analyzed.push_back (other);
+        const unsigned uidx = vlit (-other);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
+        continue;
+      }
+      if (v.reason) {                  // Remove all negative implied literals.
         assert (v.level);
         assert (v.reason);
         LOG ("flushing literal %d", other);
+        if (opts.lratdirect)
+          vivify_build_lrat_in_remove_case (other, v.reason);
       } else {                                // Decision or unassigned.
         LOG ("keeping literal %d", other);
         clause.push_back (other);
@@ -859,11 +898,47 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     if (redundant_mode) stats.vivifystred1++;
     else                stats.vivifystrirr++;
 
+    if (opts.lratdirect) {
+      assert (lrat_chain.size ());
+      // std::reverse (lrat_chain.begin (), lrat_chain.end ());   // again, reverse...
+      clear_analyzed_literals ();
+    }
     vivify_strengthen (c);
 
   } else {
     LOG ("vivification failed");
   }
+  lrat_chain.clear ();
+}
+
+
+// small reason analysis. Builds lrat_chain
+void Internal::vivify_build_lrat_in_remove_case (int lit, Clause * reason) {
+  LOG (reason, "justifying %d with reason", lit);
+
+  for (const auto & other : *reason) {
+    if (other == lit) continue;
+    Var & v = var (other);
+    Flags & f = flags (other);
+    if (f.seen) continue;
+    analyzed.push_back (other);
+    assert (val (other) < 0);
+    f.seen = true;
+    if (!v.level) {
+      // -lit is a unit so we can find id in unit_clauses
+      assert (val (lit) < 0);
+      const unsigned uidx = vlit (-lit);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      lrat_chain.push_back (id);
+      continue;
+    }
+    if (v.reason) {
+      vivify_build_lrat_in_remove_case (other, v.reason);
+    }
+  }
+  lrat_chain.push_back (reason->id);
+
 }
 
 /*------------------------------------------------------------------------*/

@@ -447,7 +447,12 @@ Clause * Internal::new_clause_as (const Clause * orig) {
   const int new_glue = orig->glue;
   Clause * res = new_clause (orig->redundant, new_glue);
   assert (!orig->redundant || !orig->keep || res->keep);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) {
+    if (opts.lratdirect)
+      proof->add_derived_clause (res, lrat_chain);
+    else
+      proof->add_derived_clause (res);
+  }
   assert (watching ());
   watch_clause (res);
   return res;
