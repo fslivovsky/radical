@@ -674,6 +674,10 @@ void Internal::analyze () {
       // if we are on decision level 0 search assign will learn unit
       // so we need a valid chain here (of course if we are not on decision
       // level 0 this will not result in a valid chain.
+      // we can just use build_chain_for_units in propagate
+
+      build_chain_for_units (forced, conflict);
+      /*
       if (opts.lratdirect) {
         assert (lrat_chain.empty ());
         for (auto & reason_lit : *conflict) {
@@ -685,7 +689,7 @@ void Internal::analyze () {
         }                                           // and is buggy
         lrat_chain.push_back (conflict->id);
       }
-      
+      */
       LOG ("forcing %d", forced);
       search_assign_driving (forced, conflict);
 
@@ -710,10 +714,6 @@ void Internal::analyze () {
 
   // Actual conflict on root level, thus formula unsatisfiable.
   //
-  // TODO: this does not work. unit_clauses are not always filled
-  // so whenever they are used I actually need to find reasons
-  // (if they exist)
-  // 
   if (!level) {
     if (opts.lratdirect) {
       assert (lrat_chain.empty ());

@@ -48,8 +48,9 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
 // calculate lrat_chain
 inline void Internal::build_chain_for_units (int lit, Clause * reason) {
   if (!opts.lratdirect) return;
+  LOG ("building chain for units");
   if (opts.chrono && assignment_level (lit, reason)) return;
-  if (level) return;   // not decision level 0
+  else if (!opts.chrono && level) return;   // not decision level 0
   assert (lrat_chain.empty ());
   for (auto & reason_lit : *reason) {
     if (lit == reason_lit) continue;
