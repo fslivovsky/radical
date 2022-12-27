@@ -359,7 +359,6 @@ bool Internal::consider_to_vivify_clause (Clause * c,
 }
 
 // Conflict analysis from 'start' which learns a decision only clause.
-// we need to build lrat_chain along analyze
 //
 void Internal::vivify_analyze_redundant (Vivifier & vivifier,
                                          Clause * start,
@@ -378,20 +377,9 @@ void Internal::vivify_analyze_redundant (Vivifier & vivifier,
     if (c->size > 2) only_binary_reasons = false;
     stack.pop_back ();
     LOG (c, "vivify analyze");
-//    if (opts.lratdirect)
-//      lrat_chain.push_back (c->id);
     for (const auto & lit : *c) {
       Var & v = var (lit);
-      if (!v.level) {
-        // -lit is a unit so we can find id in unit_clauses
-//        if (!opts.lratdirect) continue;
-//        assert (val (lit) < 0);
-//        const unsigned uidx = vlit (-lit);
-//        uint64_t id = unit_clauses[uidx];
-//        assert (id);
-//        lrat_chain.push_back (id);
-        continue;
-      }
+      if (!v.level) continue;
       Flags & f = flags (lit);
       if (f.seen) continue;
       assert (val (lit) < 0);
@@ -506,7 +494,8 @@ void Internal::vivify_strengthen (Clause * c) {
     const int unit = clause[0];
     LOG (c, "vivification shrunken to unit %d", unit);
     assert (!val (unit));
-    assign_unit (unit);             // TODO: lrat_chain
+    assign_unit (unit);
+    lrat_chain.clear ();
     stats.vivifyunits++;
 
     bool ok = propagate ();
@@ -549,6 +538,7 @@ void Internal::vivify_strengthen (Clause * c) {
              val (lit1) < 0 &&
              var (lit0).level <= var (lit1).level));
 
+
     Clause * d = new_clause_as (c);                   // TODO: lrat_chain
     LOG (c, "before vivification");
     LOG (d, "after vivification");
@@ -556,6 +546,7 @@ void Internal::vivify_strengthen (Clause * c) {
   }
   clause.clear ();
   mark_garbage (c);
+  lrat_chain.clear ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -754,6 +745,11 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
             if (!clause.empty ()) stats.vivifystred2++;
           }
           clear_analyzed_literals ();
+          if (opts.lratdirect) {
+            assert (lrat_chain.empty ());
+            vivify_build_lrat_in_remove_case (0, c);
+            clear_analyzed_literals ();
+          }
 
           backtrack (level - 1);
           assert (!conflict);
@@ -796,6 +792,13 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
         }
         clear_analyzed_literals ();
       }
+      if (opts.lratdirect) {
+        assert (lrat_chain.empty ());
+        vivify_build_lrat_in_remove_case (0, conflict);
+        //vivify_build_lrat_in_remove_case (0, c);
+        clear_analyzed_literals ();
+      }
+
 
       backtrack (level - 1);
       conflict = 0;
@@ -815,14 +818,9 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 
       if (!clause.empty ()) {
 
+        assert (!opts.lratdirect || !lrat_chain.empty ());
         LOG ("strengthening instead of subsuming clause");
-        if (opts.lratdirect) {
-          assert (lrat_chain.empty ());
-          vivify_build_lrat_in_remove_case (0, c);
-          clear_analyzed_literals ();
-        }
         vivify_strengthen (c);
-        lrat_chain.clear ();
 
       } else {  // triggered by '@7'
 
@@ -871,22 +869,12 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
       assert (val (other) < 0);
       Var & v = var (other);
       if (!v.level) {                  // Remove root-level fixed literals. 
-        if (!opts.lratdirect) continue;
-        Flags & f = flags (other);
-        f.seen = true;
-        analyzed.push_back (other);
-        const unsigned uidx = vlit (-other);
-        uint64_t id = unit_clauses[uidx];
-        assert (id);
-        lrat_chain.push_back (id);
         continue;
       }
       if (v.reason) {                  // Remove all negative implied literals.
         assert (v.level);
         assert (v.reason);
         LOG ("flushing literal %d", other);
-        if (opts.lratdirect)
-          vivify_build_lrat_in_remove_case (other, v.reason);
       } else {                                // Decision or unassigned.
         LOG ("keeping literal %d", other);
         clause.push_back (other);
@@ -897,21 +885,21 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     else                stats.vivifystrirr++;
 
     if (opts.lratdirect) {
-      lrat_chain.push_back (c->id);
+      vivify_build_lrat_in_remove_case (0, c);
       clear_analyzed_literals ();
     }
     vivify_strengthen (c);
-    lrat_chain.clear ();
 
   } else {
     LOG ("vivification failed");
   }
+  lrat_chain.clear ();
 }
 
 
 // small reason analysis. Builds lrat_chain
 void Internal::vivify_build_lrat_in_remove_case (int lit, Clause * reason) {
-  LOG (reason, "justifying %d with reason", lit);
+  LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
 
   for (const auto & other : *reason) {
     if (other == lit) continue;
@@ -923,8 +911,8 @@ void Internal::vivify_build_lrat_in_remove_case (int lit, Clause * reason) {
     f.seen = true;
     if (!v.level) {
       // -lit is a unit so we can find id in unit_clauses
-      assert (val (lit) < 0);
-      const unsigned uidx = vlit (-lit);
+      // const char tmp = val (lit);
+      const unsigned uidx = vlit (-other);
       uint64_t id = unit_clauses[uidx];
       assert (id);
       lrat_chain.push_back (id);
