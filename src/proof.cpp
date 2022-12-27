@@ -12,7 +12,7 @@ void Internal::new_proof_on_demand () {
   if (!proof) {
     proof = new Proof (this, opts.lratdirectcompare);
     LOG ("connecting proof to internal solver");
-    build_full_lrat ();
+    // build_full_lrat ();                           TODO: uncomment or change options
   }
 }
 
