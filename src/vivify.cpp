@@ -373,23 +373,23 @@ void Internal::vivify_analyze_redundant (Vivifier & vivifier,
   stack.clear ();
 
   stack.push_back (start);
-  if (opts.lratdirect)
-    lrat_chain.push_back (start->id);
   while (!stack.empty ()) {
     Clause * c = stack.back ();
     if (c->size > 2) only_binary_reasons = false;
     stack.pop_back ();
     LOG (c, "vivify analyze");
+//    if (opts.lratdirect)
+//      lrat_chain.push_back (c->id);
     for (const auto & lit : *c) {
       Var & v = var (lit);
       if (!v.level) {
         // -lit is a unit so we can find id in unit_clauses
-        if (!opts.lratdirect) continue;
-        assert (val (lit) < 0);
-        const unsigned uidx = vlit (-lit);
-        uint64_t id = unit_clauses[uidx];
-        assert (id);
-        lrat_chain.push_back (id);
+//        if (!opts.lratdirect) continue;
+//        assert (val (lit) < 0);
+//        const unsigned uidx = vlit (-lit);
+//        uint64_t id = unit_clauses[uidx];
+//        assert (id);
+//        lrat_chain.push_back (id);
         continue;
       }
       Flags & f = flags (lit);
@@ -397,11 +397,7 @@ void Internal::vivify_analyze_redundant (Vivifier & vivifier,
       assert (val (lit) < 0);
       f.seen = true;
       analyzed.push_back (lit);
-      if (v.reason) {
-        stack.push_back (v.reason);
-        if (!opts.lratdirect) continue;
-        lrat_chain.push_back (v.reason->id);
-      }
+      if (v.reason) stack.push_back (v.reason);
       else LOG ("vivify seen %d", lit);
     }
   }
@@ -821,10 +817,12 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 
         LOG ("strengthening instead of subsuming clause");
         if (opts.lratdirect) {
-          assert (lrat_chain.size ());
-          std::reverse (lrat_chain.begin (), lrat_chain.end ());   // again, reverse...
+          assert (lrat_chain.empty ());
+          vivify_build_lrat_in_remove_case (0, c);
+          clear_analyzed_literals ();
         }
         vivify_strengthen (c);
+        lrat_chain.clear ();
 
       } else {  // triggered by '@7'
 
@@ -899,16 +897,15 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     else                stats.vivifystrirr++;
 
     if (opts.lratdirect) {
-      assert (lrat_chain.size ());
-      // std::reverse (lrat_chain.begin (), lrat_chain.end ());   // again, reverse...
+      lrat_chain.push_back (c->id);
       clear_analyzed_literals ();
     }
     vivify_strengthen (c);
+    lrat_chain.clear ();
 
   } else {
     LOG ("vivification failed");
   }
-  lrat_chain.clear ();
 }
 
 
@@ -922,7 +919,7 @@ void Internal::vivify_build_lrat_in_remove_case (int lit, Clause * reason) {
     Flags & f = flags (other);
     if (f.seen) continue;
     analyzed.push_back (other);
-    assert (val (other) < 0);
+    // assert (val (other) < 0);
     f.seen = true;
     if (!v.level) {
       // -lit is a unit so we can find id in unit_clauses
