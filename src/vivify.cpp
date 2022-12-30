@@ -859,7 +859,6 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 
     assert (level);
     assert (clause.empty ());
-    assert (lrat_chain.empty ());
 
     // There might be other literals implied to false (or even root level
     // falsified).  Those should be removed in addition to 'remove'.
@@ -884,6 +883,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     else                stats.vivifystrirr++;
 
     if (opts.lratdirect) {
+      assert (lrat_chain.empty ());
       vivify_build_lrat (0, c);
       clear_analyzed_literals ();
     }
@@ -895,7 +895,19 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
   lrat_chain.clear ();
 }
 
-// small reason analysis. Builds lrat_chain
+// when we can strengthen clause c we have to build lrat.
+// uses f.seen so do not forget to clear flags afterwards.
+// this can happen in three cases. (1), (2) are only sound in redundant mode
+// (1) literal l in c is positively implied. in this case we call the function
+// with (l, l.reason). This justifies the reduction because the new clause c'
+// will include l and all decisions so l.reason is a conflict assuming -c'
+// (2) conflict during vivify propagation. function is called with (0, conflict)
+// similar to (1) but more direct.
+// (3) some literals in c are negatively implied and can therefore be removed.
+// in this case we call the function with (0, c).
+// originally we justified each literal in c on its own but this is not actually
+// necessary.
+//
 void Internal::vivify_build_lrat (int lit, Clause * reason) {
   LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
 
@@ -903,26 +915,21 @@ void Internal::vivify_build_lrat (int lit, Clause * reason) {
     if (other == lit) continue;
     Var & v = var (other);
     Flags & f = flags (other);
-    if (f.seen) continue;
-    analyzed.push_back (other);
-    // assert (val (other) < 0);
-    f.seen = true;
-    if (!v.level) {
-      // -lit is a unit so we can find id in unit_clauses
-      // const char tmp = val (lit);
-      const unsigned uidx = vlit (-other);
-      uint64_t id = unit_clauses[uidx];
-      // if (!id) id = unit_clauses[vlit (other)]; -> probably  not needed
-      assert (id);
+    if (f.seen) continue;                     // we would like to assert this:
+    analyzed.push_back (other);               // assert (val (other) < 0);
+    f.seen = true;                            // but we cannot because we have
+    if (!v.level) {                           // already backtracked (sometimes)
+      const unsigned uidx = vlit (-other);    // nevertheless we can use var (l)
+      uint64_t id = unit_clauses[uidx];       // as if l was still assigned
+      assert (id);                            // because var is updated lazily
       lrat_chain.push_back (id);
       continue;
     }
-    if (v.reason) {
+    if (v.reason) {                           // recursive justification
       vivify_build_lrat (other, v.reason);
     }
   }
   lrat_chain.push_back (reason->id);
-
 }
 
 /*------------------------------------------------------------------------*/
