@@ -279,6 +279,23 @@ void Proof::strengthen_clause (Clause * c, int remove) {
   c->id = id;
 }
 
+void Proof::strengthen_clause (Clause * c, int remove, const vector<uint64_t> & chain) {
+  LOG (c, "PROOF strengthen by removing %d in", remove);
+  assert (clause.empty ());
+  for (int i = 0; i < c->size; i++) {
+    int internal_lit = c->literals[i];
+    if (internal_lit == remove) continue;
+    add_literal (internal_lit);
+  }
+  int64_t id = ++internal->clause_id;
+  clause_id = id;
+  for (const auto & cid : chain)
+    proof_chain.push_back (cid);
+  add_derived_clause ();
+  delete_clause (c);
+  c->id = id;
+}
+
 /*------------------------------------------------------------------------*/
 
 void Proof::add_original_clause () {

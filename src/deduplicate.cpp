@@ -92,11 +92,11 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
         } else if (tmp < 0) {           // Hyper unary resolution.
 
-          // TODO: lrat (look in fradical)
           LOG ("found %d %d and %d %d which produces unit %d",
             lit, -other, lit, other, lit);
           unit = lit;
           if (opts.lratdirect) {
+            // taken from fradical
             assert (lrat_chain.empty ());
             lrat_chain.push_back (c->id);
             // We've forgotten where the other binary clause is, so go find it again

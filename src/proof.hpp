@@ -81,6 +81,7 @@ public:
   //
   void flush_clause (Clause *);           // remove falsified literals
   void strengthen_clause (Clause *, int); // remove second argument
+  void strengthen_clause (Clause *, int, const vector<uint64_t> &);
 
   void flush ();
 };
