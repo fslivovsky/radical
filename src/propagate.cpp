@@ -46,9 +46,9 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
 
 
 // calculate lrat_chain
-// inlined because mostly called inside of propagate
+// inlined because mostly called inside of propagate hjm
 //
-inline void Internal::build_chain_for_units (int lit, Clause * reason) {
+void Internal::build_chain_for_units (int lit, Clause * reason) {
   if (!opts.lratdirect) return;
   LOG ("building chain for units");
   if (opts.chrono && assignment_level (lit, reason)) return;
@@ -67,6 +67,7 @@ inline void Internal::build_chain_for_units (int lit, Clause * reason) {
 
 // same code as above but reason is assumed to be conflict and lit is not needed
 // also not inlined as it is not called inside of propagate.
+// TODO: not inlined because its used in vivify. Bad??
 //
 void Internal::build_chain_for_empty () {
   if (!opts.lratdirect) return;

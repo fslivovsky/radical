@@ -747,7 +747,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
           clear_analyzed_literals ();
           if (opts.lratdirect) {
             assert (lrat_chain.empty ());
-            vivify_build_lrat_in_remove_case (0, c);
+            vivify_build_lrat (lit, v.reason);
             clear_analyzed_literals ();
           }
 
@@ -791,12 +791,11 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
           if (!clause.empty ()) stats.vivifystred3++;
         }
         clear_analyzed_literals ();
-      }
-      if (opts.lratdirect) {
-        assert (lrat_chain.empty ());
-        vivify_build_lrat_in_remove_case (0, conflict);
-        //vivify_build_lrat_in_remove_case (0, c);
-        clear_analyzed_literals ();
+        if (opts.lratdirect) {
+          assert (lrat_chain.empty ());
+          vivify_build_lrat (0, conflict);
+          clear_analyzed_literals ();
+        }
       }
 
 
@@ -885,7 +884,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     else                stats.vivifystrirr++;
 
     if (opts.lratdirect) {
-      vivify_build_lrat_in_remove_case (0, c);
+      vivify_build_lrat (0, c);
       clear_analyzed_literals ();
     }
     vivify_strengthen (c);
@@ -896,9 +895,8 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
   lrat_chain.clear ();
 }
 
-
 // small reason analysis. Builds lrat_chain
-void Internal::vivify_build_lrat_in_remove_case (int lit, Clause * reason) {
+void Internal::vivify_build_lrat (int lit, Clause * reason) {
   LOG (reason, "VIVIFY LRAT justifying %d with reason", lit);
 
   for (const auto & other : *reason) {
@@ -914,12 +912,13 @@ void Internal::vivify_build_lrat_in_remove_case (int lit, Clause * reason) {
       // const char tmp = val (lit);
       const unsigned uidx = vlit (-other);
       uint64_t id = unit_clauses[uidx];
+      // if (!id) id = unit_clauses[vlit (other)]; -> probably  not needed
       assert (id);
       lrat_chain.push_back (id);
       continue;
     }
     if (v.reason) {
-      vivify_build_lrat_in_remove_case (other, v.reason);
+      vivify_build_lrat (other, v.reason);
     }
   }
   lrat_chain.push_back (reason->id);
