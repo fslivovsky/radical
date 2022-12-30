@@ -55,7 +55,7 @@ OPTION( conditionmaxeff, 1e7,  0,2e9,1,0,0,1, "maximum condition efficiency") \
 OPTION( conditionmaxrat, 100,  1,2e9,1,0,0,1, "maximum clause variable ratio") \
 OPTION( conditionmineff, 1e6,  0,2e9,1,0,0,1, "minimum condition efficiency") \
 OPTION( conditionreleff, 100,  1,1e5,0,0,0,1, "relative efficiency per mille") \
-OPTION( cover,             0,  0,  1,0,1,1,1, "covered clause elimination") \
+OPTION( cover,             0,  0,  1,0,1,0,1, "covered clause elimination") \
 OPTION( covermaxclslim,  1e5,  1,2e9,2,0,0,1, "maximum clause size") \
 OPTION( covermaxeff,     1e8,  0,2e9,1,0,0,1, "maximum cover efficiency") \
 OPTION( coverminclslim,    2,  2,2e9,0,0,0,1, "minimum clause size") \
@@ -63,7 +63,7 @@ OPTION( covermineff,     1e6,  0,2e9,1,0,0,1, "minimum cover efficiency") \
 OPTION( coverreleff,       4,  1,1e5,1,0,0,1, "relative efficiency per mille") \
 OPTION( decompose,         1,  0,  1,0,1,1,1, "decompose BIG in SCCs and ELS") \
 OPTION( decomposerounds,   2,  1, 16,1,0,0,1, "number of decompose rounds") \
-OPTION( deduplicate,       1,  0,  1,0,1,1,1, "remove duplicated binaries") \
+OPTION( deduplicate,       1,  0,  1,0,1,0,1, "remove duplicated binaries") \
 OPTION( eagersubsume,      1,  0,  1,0,0,0,1, "subsume recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3,0,0,0,1, "limit on subsumed candidates") \
 OPTION( elim,              1,  0,  1,0,1,1,1, "bounded variable elimination") \

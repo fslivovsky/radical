@@ -92,9 +92,22 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
         } else if (tmp < 0) {           // Hyper unary resolution.
 
+          // TODO: lrat (look in fradical)
           LOG ("found %d %d and %d %d which produces unit %d",
             lit, -other, lit, other, lit);
           unit = lit;
+          if (opts.lratdirect) {
+            assert (lrat_chain.empty ());
+            lrat_chain.push_back (c->id);
+            // We've forgotten where the other binary clause is, so go find it again
+            for (watch_iterator k = ws.begin ();;k++) {
+              assert (k != i);
+              if (!k->binary ()) continue;
+              if (k->blit != -other) continue;
+              lrat_chain.push_back (k->clause->id);
+              break;
+            }
+          }
           j = ws.begin ();              // Flush 'ws'.
           units++;
 
@@ -124,6 +137,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
       stats.failed++;
       stats.hyperunary++;
       assign_unit (unit);
+      lrat_chain.clear ();
 
       if (!propagate ()) {
         LOG ("empty clause after propagating unit");
