@@ -499,11 +499,7 @@ void Internal::vivify_strengthen (Clause * c) {
     stats.vivifyunits++;
 
     bool ok = propagate ();
-    if (!ok) {
-      build_chain_for_empty ();
-      learn_empty_clause ();
-      lrat_chain.clear ();
-    }
+    if (!ok) learn_empty_clause ();
 
   } else {
 
@@ -1040,9 +1036,7 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
   if (!unsat && !propagate ()) {
     LOG ("propagation after connecting watches in inconsistency");
-    build_chain_for_empty ();
     learn_empty_clause ();
-    lrat_chain.clear ();
   }
 
   while (!unsat &&
@@ -1098,9 +1092,7 @@ void Internal::vivify_round (bool redundant_mode, int64_t propagation_limit) {
 
     if (!propagate ()) {
       LOG ("propagating vivified units leads to conflict");
-      build_chain_for_empty ();
       learn_empty_clause ();
-      lrat_chain.clear ();
     }
   }
 

@@ -71,10 +71,10 @@ void Internal::build_chain_for_units (int lit, Clause * reason) {
 //
 void Internal::build_chain_for_empty () {
   if (!opts.lratdirect) return;
-  LOG (conflict, "lrat for global empty clause with conflict");
-  assert (conflict);
   assert (!level);
   assert (lrat_chain.empty ());
+  assert (conflict);
+  LOG (conflict, "lrat for global empty clause with conflict");
   for (auto & lit : *conflict) {
     assert (val (lit) < 0);
     const unsigned uidx = vlit (-lit);

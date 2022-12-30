@@ -14,6 +14,7 @@ namespace CaDiCaL {
 
 void Internal::learn_empty_clause () {
   assert (!unsat);
+  build_chain_for_empty ();
   LOG ("learned empty clause");
   external->check_learned_empty_clause ();
   int64_t id = ++clause_id;
@@ -25,6 +26,7 @@ void Internal::learn_empty_clause () {
   }
   unsat = true;
   conflict_id = id;
+  lrat_chain.clear ();
 }
 
 void Internal::learn_unit_clause (int lit) {
@@ -703,7 +705,6 @@ void Internal::analyze () {
   // Actual conflict on root level, thus formula unsatisfiable.
   //
   if (!level) {
-    build_chain_for_empty ();
     learn_empty_clause ();
     if (external->learner) external->export_learned_empty_clause ();
     lrat_chain.clear ();
@@ -822,7 +823,10 @@ void Internal::analyze () {
   // then lrat_chain is still valid and we will learn a unit or empty clause
   //
   if (uip) search_assign_driving (-uip, driving_clause);
-  else learn_empty_clause ();
+  else {
+    lrat_chain.clear ();           // we call build_chain_for_empty in
+    learn_empty_clause ();         // learn_empty_clause
+  }
 
   if (stable) reluctant.tick (); // Reluctant has its own 'conflict' counter.
 
