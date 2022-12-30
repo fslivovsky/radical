@@ -26,7 +26,7 @@ OPTION( arenacompact,      1,  0,  1,0,0,0,1, "keep clauses compact") \
 OPTION( arenasort,         1,  0,  1,0,0,0,1, "sort clauses in arena") \
 OPTION( arenatype,         3,  1,  3,0,0,0,1, "1=clause, 2=var, 3=queue") \
 OPTION( binary,            1,  0,  1,0,0,0,1, "use binary proof format") \
-OPTION( block,             0,  0,  1,0,1,1,1, "blocked clause elimination") \
+OPTION( block,             0,  0,  1,0,1,0,1, "blocked clause elimination") \
 OPTION( blockmaxclslim,  1e5,  1,2e9,2,0,0,1, "maximum clause size") \
 OPTION( blockminclslim,    2,  2,2e9,0,0,0,1, "minimum clause size") \
 OPTION( blockocclim,     1e2,  1,2e9,2,0,0,1, "occurrence limit") \
@@ -45,7 +45,7 @@ OPTION( chrono,            1,  0,  2,0,0,0,1, "chronological backtracking") \
 OPTION( chronoalways,      0,  0,  1,0,0,0,1, "force always chronological") \
 OPTION( chronolevelim,   1e2,  0,2e9,0,0,0,1, "chronological level limit") \
 OPTION( chronoreusetrail,  1,  0,  1,0,0,0,1, "reuse trail chronologically") \
-OPTION( compact,           1,  0,  1,0,1,1,1, "compact internal variables") \
+OPTION( compact,           1,  0,  1,0,1,0,1, "compact internal variables") \
 OPTION( compactint,      2e3,  1,2e9,0,0,0,1, "compacting interval") \
 OPTION( compactlim,      1e2,  0,1e3,0,0,0,1, "inactive limit per mille") \
 OPTION( compactmin,      1e2,  1,2e9,0,0,0,1, "minimum inactive limit") \
