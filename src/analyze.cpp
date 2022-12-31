@@ -20,7 +20,7 @@ void Internal::learn_empty_clause () {
   int64_t id = ++clause_id;
   if (proof) {
     if (opts.lratdirect) {
-      LOG (lrat_chain, "proof chain: ");
+      LOG (lrat_chain, "learned empty clause with proof chain: ");
       proof->add_derived_empty_clause (id, lrat_chain);
     } else proof->add_derived_empty_clause (id);
   }
@@ -40,7 +40,7 @@ void Internal::learn_unit_clause (int lit) {
   unit_clauses[uidx] = id;
   if (proof) {
     if (opts.lratdirect) {
-      LOG (lrat_chain, "proof chain: ");
+      LOG (lrat_chain, "learned unit clause with proof chain: ");
       proof->add_derived_unit_clause (id, lit, lrat_chain);
     } else proof->add_derived_unit_clause (id, lit);
   }

@@ -407,7 +407,7 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
   Clause * res = new_clause (true, glue);
   if (proof) {
     if (opts.lratdirect) {
-      LOG (lrat_chain, "proof chain: ");
+      LOG (lrat_chain, "new learned redundant clause with proof chain: ");
       proof->add_derived_clause (res, lrat_chain);
     } else proof->add_derived_clause (res);
   }
@@ -421,7 +421,14 @@ Clause * Internal::new_learned_redundant_clause (int glue) {
 Clause * Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   external->check_learned_clause ();
   Clause * res = new_clause (red, glue);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) {
+    if (opts.lratdirect) {
+      LOG (lrat_chain, "new hyper binary resolved clause with proof chain: ");
+      proof->add_derived_clause (res, lrat_chain);
+    }
+    else
+      proof->add_derived_clause (res);
+  }
   assert (watching ());
   watch_clause (res);
   return res;
@@ -433,7 +440,14 @@ Clause * Internal::new_hyper_ternary_resolved_clause (bool red) {
   external->check_learned_clause ();
   size_t size = clause.size ();
   Clause * res = new_clause (red, size);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) {
+    if (opts.lratdirect) {
+      LOG (lrat_chain, "new hyper ternary resolved clause with proof chain: ");
+      proof->add_derived_clause (res, lrat_chain);
+    }
+    else
+      proof->add_derived_clause (res);
+  }
   assert (!watching ());
   return res;
 }
@@ -447,8 +461,10 @@ Clause * Internal::new_clause_as (const Clause * orig) {
   Clause * res = new_clause (orig->redundant, new_glue);
   assert (!orig->redundant || !orig->keep || res->keep);
   if (proof) {
-    if (opts.lratdirect)
+    if (opts.lratdirect) {
+      LOG (lrat_chain, "new clause as %" PRIu64 "with proof chain: ", orig->id);
       proof->add_derived_clause (res, lrat_chain);
+    }
     else
       proof->add_derived_clause (res);
   }
@@ -464,8 +480,10 @@ Clause * Internal::new_resolved_irredundant_clause () {
   external->check_learned_clause ();
   Clause * res = new_clause (false);
   if (proof) {
-    if (opts.lratdirect)
+    if (opts.lratdirect) {
+      LOG (lrat_chain, "new resolved irredundant clause with proof chain: ");
       proof->add_derived_clause (res, lrat_chain);
+    }
     else
       proof->add_derived_clause (res);
   }
