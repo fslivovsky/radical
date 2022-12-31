@@ -47,6 +47,21 @@ Internal::second_literal_in_binary_clause (Eliminator & eliminator,
 
 /*------------------------------------------------------------------------*/
 
+Clause * Internal::find_binary_clause (Eliminator & eliminator, int first, int second) {
+  int best = first;
+  int other = second;
+  if (occs (first).size () > occs (second).size ()) {
+    best = second;
+    other = first;
+  }
+  for (auto c : occs (best))
+    if (second_literal_in_binary_clause (eliminator, c, best) == other)
+      return c;
+  return 0;
+}
+
+/*------------------------------------------------------------------------*/
+
 // Mark all other literals in binary clauses with 'first'.  During this
 // marking we might also detect hyper unary resolvents producing a unit.
 // If such a unit is found we propagate it and return immediately.
@@ -69,6 +84,28 @@ void Internal::mark_binary_literals (Eliminator & eliminator, int first) {
     const int tmp = marked (second);
     if (tmp < 0) {
       LOG ("found binary resolved unit %d", first);
+      if (opts.lratdirect) {
+        Clause * d = find_binary_clause (eliminator, first, -second);
+        assert (d);
+        for (auto & lit : *d) {
+          if (lit == first || lit == -second) continue;
+          assert (val (lit) < 0);
+          const unsigned uidx = vlit (-lit);
+          uint64_t id = unit_clauses[uidx];
+          assert (id);
+          lrat_chain.push_back (id);
+        }
+        for (auto & lit : *c) {
+          if (lit == first || lit == second) continue;
+          assert (val (lit) < 0);
+          const unsigned uidx = vlit (-lit);
+          uint64_t id = unit_clauses[uidx];
+          assert (id);
+          lrat_chain.push_back (id);
+        }
+        lrat_chain.push_back (c->id);
+        lrat_chain.push_back (d->id);
+      }
       assign_unit (first);
       elim_propagate (eliminator, first);
       return;
@@ -123,6 +160,28 @@ void Internal::find_equivalence (Eliminator & eliminator, int pivot) {
     const int tmp = marked (second);
     if (tmp > 0) {
       LOG ("found binary resolved unit %d", second);
+      if (opts.lratdirect) {
+        Clause * d = find_binary_clause (eliminator, pivot, second);
+        assert (d);
+        for (auto & lit : *d) {
+          if (lit == pivot || lit == second) continue;
+          assert (val (lit) < 0);
+          const unsigned uidx = vlit (-lit);
+          uint64_t id = unit_clauses[uidx];
+          assert (id);
+          lrat_chain.push_back (id);
+        }
+        for (auto & lit : *c) {
+          if (lit == -pivot || lit == second) continue;
+          assert (val (lit) < 0);
+          const unsigned uidx = vlit (-lit);
+          uint64_t id = unit_clauses[uidx];
+          assert (id);
+          lrat_chain.push_back (id);
+        }
+        lrat_chain.push_back (c->id);
+        lrat_chain.push_back (d->id);
+      }
       assign_unit (second);
       elim_propagate (eliminator, second);
       if (val (pivot)) break;

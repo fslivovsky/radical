@@ -862,6 +862,7 @@ struct Internal {
 
     void find_if_then_else(Eliminator &, int pivot);
 
+    Clause* find_binary_clause (Eliminator & eliminator, int, int);
     void find_gate_clauses(Eliminator &, int pivot);
     void unmark_gate_clauses(Eliminator &);
 
