@@ -42,6 +42,9 @@ inline void Internal::set_parent_reason_literal (int lit, int reason) {
 // On-the-fly (dynamic) hyper binary resolution on decision level one can
 // make use of the fact that the implication graph is actually a tree.
 
+// TODO: we need to actually remember reason clauses in order to build lrat
+// in probe_dominator
+
 // Compute a dominator of two literals in the binary implication tree.
 
 int Internal::probe_dominator (int a, int b) {
@@ -236,7 +239,10 @@ inline void Internal::probe_propagate2 () {
       const signed char b = val (w.blit);
       if (b > 0) continue;
       if (b < 0) conflict = w.clause;                   // but continue
-      else probe_assign (w.blit, -lit);
+      else {
+        // TODO: lrat
+        probe_assign (w.blit, -lit);
+      }
     }
   }
 }
@@ -292,9 +298,12 @@ bool Internal::probe_propagate () {
           } else if (!u) {
             if (level == 1) {
               lits[0] = other, lits[1] = lit;
-              int dom = hyper_binary_resolve (w.clause);
+              int dom = hyper_binary_resolve (w.clause);    // TODO: lrat in here
               probe_assign (other, dom);
-            } else probe_assign_unit (other);
+            } else {
+              // TODO: lrat
+              probe_assign_unit (other);
+            }
             probe_propagate2 ();
           } else conflict = w.clause;
         }
@@ -333,7 +342,7 @@ void Internal::failed_literal (int failed) {
   LOG (conflict, "analyzing failed literal conflict");
 
   int uip = 0;
-  for (const auto & lit : *conflict) {
+  for (const auto & lit : *conflict) {                       // TODO: can probly do lrat in here
     const int other = -lit;
     if (!var (other).level) continue;
     uip = uip ? probe_dominator (uip, other) : other;
@@ -369,6 +378,7 @@ void Internal::failed_literal (int failed) {
       learn_empty_clause ();
     } else {
       LOG ("found unassigned failed parent %d", parent);
+      // TODO: lrat ??
       probe_assign_unit (-parent);
       if (!probe_propagate ()) learn_empty_clause ();
     }
@@ -595,7 +605,7 @@ bool Internal::probe_round () {
     LOG ("probing %d", probe);
     probe_assign_decision (probe);
     if (probe_propagate ()) backtrack ();
-    else failed_literal (probe);
+    else failed_literal (probe);                        // TODO: lrat in failed literal
   }
 
   if (unsat) LOG ("probing derived empty clause");
