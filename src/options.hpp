@@ -169,7 +169,7 @@ OPTION( subsumereleff,   1e3,  1,1e5,1,0,0,1, "relative efficiency per mille") \
 OPTION( subsumestr,        1,  0,  1,0,0,0,1, "strengthen during subsume") \
 OPTION( target,            1,  0,  2,0,0,0,1, "target phases (1=stable only)") \
 OPTION( terminateint,     10,  0,1e4,0,0,0,1, "termination check interval") \
-OPTION( ternary,           1,  0,  1,0,1,1,1, "hyper ternary resolution") \
+OPTION( ternary,           1,  0,  1,0,1,0,1, "hyper ternary resolution") \
 OPTION( ternarymaxadd,   1e3,  0,1e4,1,0,0,1, "max clauses added in percent") \
 OPTION( ternarymaxeff,   1e8,  0,2e9,1,0,0,1, "ternary maximum efficiency") \
 OPTION( ternarymineff,   1e6,  1,2e9,1,0,0,1, "minimum ternary efficiency") \

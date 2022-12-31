@@ -179,6 +179,8 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   level = 0;
   if (ok) { LOG ("instantiation failed"); return false; }
   unwatch_clause (c);
+  // TODO: only place we need lrat... we can do smth similar as in vivify but
+  // we actually need to remember reason clauses...
   strengthen_clause (c, lit);
   watch_clause (c);
   assert (c->size > 1);
