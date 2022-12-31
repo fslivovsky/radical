@@ -96,11 +96,22 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
           int unit = 0;
           for (const auto & lit : * d) {
             const signed char tmp = val (lit);
-            if (tmp < 0) continue;
+            if (tmp < 0) {
+              if (!opts.lratdirect) continue;
+              const unsigned uidx = vlit (-lit);
+              uint64_t id = unit_clauses[uidx];
+              assert (id);
+              lrat_chain.push_back (id);
+              continue;
+            }
             if (tmp > 0) { satisfied = true; break; }
             if (lit == negated) continue;
             if (unit) { unit = INT_MIN; break; }
             else unit = lit;
+          }
+          if (opts.lratdirect) {                 // TODO: not 100% sure on order
+            lrat_chain.push_back (c->id);
+            lrat_chain.push_back (d->id);
           }
           assert (unit);
           if (satisfied) {
@@ -120,6 +131,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             assert (negated != best);
             eliminator.enqueue (d);
           }
+          lrat_chain.clear ();
         }
       }
     }

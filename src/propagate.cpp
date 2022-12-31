@@ -95,6 +95,8 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   assert (!flags (idx).eliminated () || reason == decision_reason);
   Var & v = var (idx);
   int lit_level;
+  
+  assert (!opts.lratdirect || level || reason == decision_reason || !lrat_chain.empty ());
 
   // The following cases are explained in the two comments above before
   // 'decision_reason' and 'assignment_level'.
@@ -129,6 +131,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
       __builtin_prefetch (&w, 0, 1);
     }
   }
+  lrat_chain.clear ();
 }
 
 /*------------------------------------------------------------------------*/
@@ -240,7 +243,7 @@ bool Internal::propagate () {
         else {
           build_chain_for_units (w.blit, w.clause);
           search_assign (w.blit, w.clause);
-          lrat_chain.clear ();
+          // lrat_chain.clear (); done in search_assign
         }
 
       } else {
@@ -333,7 +336,7 @@ bool Internal::propagate () {
             //
             build_chain_for_units (other, w.clause);
             search_assign (other, w.clause);
-            lrat_chain.clear ();
+            // lrat_chain.clear (); done in search_assign
 
             // Similar code is in the implementation of the SAT'18 paper on
             // chronological backtracking but in our experience, this code

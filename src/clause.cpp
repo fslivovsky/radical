@@ -463,7 +463,12 @@ Clause * Internal::new_clause_as (const Clause * orig) {
 Clause * Internal::new_resolved_irredundant_clause () {
   external->check_learned_clause ();
   Clause * res = new_clause (false);
-  if (proof) proof->add_derived_clause (res);
+  if (proof) {
+    if (opts.lratdirect)
+      proof->add_derived_clause (res, lrat_chain);
+    else
+      proof->add_derived_clause (res);
+  }
   assert (!watching ());
   return res;
 }

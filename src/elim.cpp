@@ -149,10 +149,15 @@ void Internal::elim_propagate (Eliminator & eliminator, int root) {
         mark_garbage (c);
       } else if (!unit) {
         LOG ("empty clause during elimination propagation of %d", lit);
+        // TODO: probably need to set conflict = c for lrat
+        conflict = c;
         learn_empty_clause ();
+        conflict = 0;
         break;
       } else if (unit != INT_MIN) {
         LOG ("new unit %d during elimination propagation of %d", unit, lit);
+        // TODO: build_chain_for_units should work here.
+        build_chain_for_units (unit, c);
         assign_unit (unit);
         work.push_back (unit);
       }
@@ -190,9 +195,12 @@ void Internal::elim_on_the_fly_self_subsumption (Eliminator & eliminator,
     if (tmp < 0) continue;
     clause.push_back (lit);
   }
+  // TODO: lrat. I think we need to know resolvent here. (lrat: resolvent + antecendent) which should be c.
+  // probably nothing todo here...
   Clause * r = new_resolved_irredundant_clause ();
   elim_update_added_clause (eliminator, r);
   clause.clear ();
+  lrat_chain.clear ();
   elim_update_removed_clause (eliminator, c, pivot);
   mark_garbage (c);
 }
@@ -258,7 +266,14 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     assert (lit != -pivot);
     const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
-    else if (tmp < 0) continue;
+    else if (tmp < 0) {
+      if (!opts.lratdirect) continue;
+      const unsigned uidx = vlit (-lit);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      lrat_chain.push_back (id);
+      continue;
+    }
     else mark (lit), clause.push_back (lit), s++;
   }
   if (satisfied) {
@@ -279,7 +294,14 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     assert (lit != pivot);
     signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
-    else if (tmp < 0) continue;
+    else if (tmp < 0) {
+      if (!opts.lratdirect) continue;
+      const unsigned uidx = vlit (-lit);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      lrat_chain.push_back (id);
+      continue;
+    }
     else if ((tmp = marked (lit)) < 0) { tautological = lit; break; }
     else if (!tmp) clause.push_back (lit), t++;
     else assert (tmp > 0), t++;
@@ -287,12 +309,18 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
 
   unmark (c);
   const int64_t size = clause.size ();
+  
+  if (opts.lratdirect) {
+    lrat_chain.push_back (d->id);
+    lrat_chain.push_back (c->id);
+  }
 
   if (satisfied) {
     LOG (d, "satisfied by %d antecedent", satisfied);
     elim_update_removed_clause (eliminator, d, satisfied);
     mark_garbage (d);
     clause.clear ();
+    lrat_chain.clear ();
     return false;
   }
 
@@ -302,13 +330,16 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (tautological) {
     clause.clear ();
     LOG ("resolvent tautological on %d", tautological);
+    lrat_chain.clear ();
     return false;
   }
 
   if (!size) {
     clause.clear ();
     LOG ("empty resolvent");
-    learn_empty_clause ();
+    // TODO: lrat?? c or d (or both) should be sufficient.
+    // -> also need all unit ids (for negated lits in c and d)
+    learn_empty_clause ();              // already clears lrat_chain.
     return false;
   }
 
@@ -316,13 +347,16 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     int unit = clause[0];
     LOG ("unit resolvent %d", unit);
     clause.clear ();
-    assign_unit (unit);
+    // TODO: lrat, prob c + d
+    // -> also need all unit ids (for negated lits in c and d)
+    assign_unit (unit);              // already clears lrat_chain.
     if (propagate_eagerly)
       elim_propagate (eliminator, unit);
     return false;
   }
 
   LOG (clause, "resolvent");
+  assert (!opts.lratdirect || !lrat_chain.empty ());
 
   // Double self-subsuming resolution.  The clauses 'c' and 'd' are
   // identical except for the pivot which occurs in different phase.  The
@@ -332,6 +366,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     assert (s == size + 1);
     assert (t == size + 1);
     clause.clear ();
+    // TODO: lrat is c + d (+ eventual units)
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     LOG (d, "double pivot %d on-the-fly self-subsuming resolution", -pivot);
     stats.elimotfsub++;
@@ -348,6 +383,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (s > size) {
     assert (s == size + 1);
     clause.clear ();
+    // TODO: lrat is c + d (+ eventual units) -> not 100% sure.
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     return false;
   }
@@ -357,10 +393,14 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   if (t > size) {
     assert (t == size + 1);
     clause.clear ();
+    // TODO: lrat is c + d (+ eventual units) -> same.
     elim_on_the_fly_self_subsumption (eliminator, d, -pivot);
     return false;
   }
 
+  // TODO: either clear lrat_chain or check what we do from here on out.
+  // if propagate_eagerly is true we want to clear lrat_chain, else leave it
+  if (propagate_eagerly) lrat_chain.clear ();
   return true;
 }
 
@@ -469,9 +509,11 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (d->garbage) continue;
       if (substitute && c->gate == d->gate) continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false)) continue;
-      Clause * r = new_resolved_irredundant_clause ();
-      elim_update_added_clause (eliminator, r);
+      assert (!opts.lratdirect || !lrat_chain.empty ());
+      Clause * r = new_resolved_irredundant_clause ();  // TODO: clear lrat_chain afterwards (or better
+      elim_update_added_clause (eliminator, r);         // clear it in new_resolved_irredundant_clause.
       eliminator.enqueue (r);
+      lrat_chain.clear ();
       clause.clear ();
       resolvents++;
 

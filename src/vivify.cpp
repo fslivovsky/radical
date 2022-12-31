@@ -495,7 +495,7 @@ void Internal::vivify_strengthen (Clause * c) {
     LOG (c, "vivification shrunken to unit %d", unit);
     assert (!val (unit));
     assign_unit (unit);
-    lrat_chain.clear ();
+    // lrat_chain.clear ();   done in search_assign
     stats.vivifyunits++;
 
     bool ok = propagate ();
@@ -535,7 +535,7 @@ void Internal::vivify_strengthen (Clause * c) {
              var (lit0).level <= var (lit1).level));
 
 
-    Clause * d = new_clause_as (c);                   // TODO: lrat_chain
+    Clause * d = new_clause_as (c);
     LOG (c, "before vivification");
     LOG (d, "after vivification");
     (void) d;

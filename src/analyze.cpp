@@ -687,7 +687,7 @@ void Internal::analyze () {
       search_assign_driving (forced, conflict);
 
       conflict = 0;
-      lrat_chain.clear ();
+      // lrat_chain.clear (); done in search_assign
       STOP (analyze);
       return;
     }
@@ -710,7 +710,7 @@ void Internal::analyze () {
   if (!level) {
     learn_empty_clause ();
     if (external->learner) external->export_learned_empty_clause ();
-    lrat_chain.clear ();
+    // lrat_chain.clear (); done in learn_empty_clause
     STOP (analyze);
     return;
   }
