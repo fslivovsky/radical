@@ -47,6 +47,10 @@ Internal::second_literal_in_binary_clause (Eliminator & eliminator,
 
 /*------------------------------------------------------------------------*/
 
+// I needed to find the second clause for hyper unary resultion to build lrat
+// this is not efficient but I could not find a better way then just finding
+// the corresponding clause in all possible clauses
+//
 Clause * Internal::find_binary_clause (Eliminator & eliminator, int first, int second) {
   int best = first;
   int other = second;
