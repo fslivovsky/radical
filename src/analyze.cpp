@@ -827,7 +827,8 @@ void Internal::analyze () {
   //
   if (uip) search_assign_driving (-uip, driving_clause);
   else {
-    lrat_chain.clear ();           // we call build_chain_for_empty in
+    // lrat_chain.clear ();           // we call build_chain_for_empty in
+                                      // should not be necessary anymore...
     learn_empty_clause ();         // learn_empty_clause
   }
 

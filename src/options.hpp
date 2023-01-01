@@ -61,7 +61,7 @@ OPTION( covermaxeff,     1e8,  0,2e9,1,0,0,1, "maximum cover efficiency") \
 OPTION( coverminclslim,    2,  2,2e9,0,0,0,1, "minimum clause size") \
 OPTION( covermineff,     1e6,  0,2e9,1,0,0,1, "minimum cover efficiency") \
 OPTION( coverreleff,       4,  1,1e5,1,0,0,1, "relative efficiency per mille") \
-OPTION( decompose,         1,  0,  1,0,1,1,1, "decompose BIG in SCCs and ELS") \
+OPTION( decompose,         1,  0,  1,0,1,0,1, "decompose BIG in SCCs and ELS") \
 OPTION( decomposerounds,   2,  1, 16,1,0,0,1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1,0,1,0,1, "remove duplicated binaries") \
 OPTION( eagersubsume,      1,  0,  1,0,0,0,1, "subsume recently learned") \
@@ -98,7 +98,7 @@ OPTION( flushfactor,       3,  1,1e3,0,0,0,1, "interval increase") \
 OPTION( flushint,        1e5,  1,2e9,0,0,0,1, "initial limit") \
 OPTION( forcephase,        0,  0,  1,0,0,0,1, "always use initial phase") \
 OPTION( inprocessing,      1,  0,  1,0,0,0,1, "enable inprocessing") \
-OPTION( instantiate,       0,  0,  1,0,1,1,1, "variable instantiation") \
+OPTION( instantiate,       0,  0,  1,0,1,0,1, "variable instantiation") \
 OPTION( instantiateclslim, 3,  2,2e9,0,0,0,1, "minimum clause size") \
 OPTION( instantiateocclim, 1,  1,2e9,2,0,0,1, "maximum occurrence limit") \
 OPTION( instantiateonce,   1,  0,  1,0,0,0,1, "instantiate each clause once") \

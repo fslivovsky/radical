@@ -8,13 +8,27 @@ namespace CaDiCaL {
 // index in the SCC.  These variables are marked 'substituted' and will be
 // removed from all clauses.  Their value will be fixed during 'extend'.
 
-#define TRAVERSED UINT_MAX              // mark completely traversed
 
-struct DFS {
-  unsigned idx;                         // depth first search index
-  unsigned min;                         // minimum reachable index
-  DFS () : idx (0), min (0) { }
-};
+
+// compute lrat_chain from a given starting literal to root
+// if clear is set the result is pushed to mini_chain instead and dfs
+// is cleared such that all seen literals will become roots as well
+//
+void Internal::decompose_analyze_lrat (DFS * dfs, int start, bool clear) {
+  for (int lit = start; lit;) {
+    DFS & lit_dfs = dfs[vlit (lit)];
+    lit = lit_dfs.parent;
+    uint64_t id = lit_dfs.id;
+    assert (id);
+    if (!clear) {
+      lrat_chain.push_back (id);
+      continue;
+    }
+    mini_chain.push_back (id);
+    lit_dfs.parent = lit_dfs.id = 0;
+  }
+}
+
 
 // This performs one round of Tarjan's algorithm, e.g., equivalent literal
 // detection and substitution, on the whole formula.  We might want to
@@ -117,8 +131,23 @@ bool Internal::decompose_round () {
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
-                  assign_unit (parent);
-                  learn_empty_clause ();
+                  if (opts.lratdirect) {
+                    assert (lrat_chain.empty ());
+                    assert (mini_chain.empty ());
+                    decompose_analyze_lrat (dfs, parent, true);
+                    for (auto p : mini_chain) {
+                      lrat_chain.push_back (p);
+                    }
+                    mini_chain.clear ();
+                    decompose_analyze_lrat (dfs, -parent, true);
+                    for (auto p = mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+                      lrat_chain.push_back (*p);
+                    }
+                    mini_chain.clear ();
+                  }
+                  assign_unit (parent);                // TODO: lrat
+                  learn_empty_clause ();               // we have to assign conflict :/
+                  lrat_chain.clear ();
                 } else {
                   if (abs (other) < abs (repr)) repr = other;
                   size++;
@@ -173,8 +202,12 @@ bool Internal::decompose_round () {
               if (!w.binary ()) continue;
               const int child = w.blit;
               if (!active (child)) continue;
-              const DFS & child_dfs = dfs[vlit (child)];
+              DFS & child_dfs = dfs[vlit (child)];
               if (child_dfs.idx) continue;
+              if (opts.lratdirect) {
+                child_dfs.id = w.clause->id;
+                child_dfs.parent = w.blit;
+              }
               work.push_back (child);
             }
           }
@@ -185,7 +218,7 @@ bool Internal::decompose_round () {
 
   erase_vector (work);
   erase_vector (scc);
-  delete [] dfs;
+  // delete [] dfs; need to postpone until after changing clauses...
 
   // Only keep the representatives 'repr' mapping.
 
@@ -222,13 +255,21 @@ bool Internal::decompose_round () {
     // satisfied and can be marked as garbage.
 
     assert (clause.empty ());
+    assert (lrat_chain.empty ());
     bool satisfied = false;
 
     for (int k = 0; !satisfied && k < size; k++) {
       const int lit = c->literals[k];
       signed char tmp = val (lit);
       if (tmp > 0) satisfied = true;
-      else if (tmp < 0) continue;
+      else if (tmp < 0) {
+        if (!opts.lratdirect) continue;
+        const unsigned uidx = vlit (-lit);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
+        continue;
+      }
       else {
         const int other = reprs [vlit (lit)];
         tmp = val (other);
@@ -240,6 +281,8 @@ bool Internal::decompose_round () {
           else if (!tmp) {
             mark (other);
             clause.push_back (other);
+            if (opts.lratdirect)                          // should compute lrat_chain
+              decompose_analyze_lrat (dfs, lit, false);   // from lit to other
           }
         }
       }
@@ -251,8 +294,8 @@ bool Internal::decompose_round () {
       garbage++;
     } else if (!clause.size ()) {
       LOG ("learned empty clause during decompose");
-      learn_empty_clause ();
-    } else if (clause.size () == 1) {
+      learn_empty_clause ();                             // again assign conflict...
+    } else if (clause.size () == 1) {                    // or change learn_empty_clause...
       LOG (c, "unit %d after substitution", clause[0]);
       assign_unit (clause[0]);
       mark_garbage (c);
@@ -274,7 +317,7 @@ bool Internal::decompose_round () {
       assert (c->size > 2);
       if (!c->redundant) mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (++clause_id, clause);
+        proof->add_derived_clause (++clause_id, clause);    // TODO: lrat_chain...
         proof->delete_clause (c);
         c->id = clause_id;
       }
@@ -295,6 +338,7 @@ bool Internal::decompose_round () {
       assert (marked (lit) > 0);
       unmark (lit);
     }
+    lrat_chain.clear ();
   }
 
   if (!unsat && !postponed_garbage.empty ()) {
@@ -341,6 +385,7 @@ bool Internal::decompose_round () {
   }
 
   delete [] reprs;
+  delete [] dfs;
 
   flush_all_occs_and_watches ();  // particularly the 'blit's
 

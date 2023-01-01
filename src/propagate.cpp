@@ -70,7 +70,7 @@ void Internal::build_chain_for_units (int lit, Clause * reason) {
 // TODO: not inlined because its used in vivify. Bad??
 //
 void Internal::build_chain_for_empty () {
-  if (!opts.lratdirect) return;
+  if (!opts.lratdirect || !lrat_chain.empty ()) return;
   assert (!level);
   assert (lrat_chain.empty ());
   assert (conflict);

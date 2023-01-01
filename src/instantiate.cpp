@@ -57,6 +57,11 @@ inline void Internal::inst_assign (int lit) {
   trail.push_back (lit);
 }
 
+// since we do not actually remember reasons we cannot do conflict analysis
+// Therefore we just add every propagated clause to lrat_chain. This is sound
+// because the propagated clauses are always unit and we only strengthen c
+// if propagation leads to a conflict (which we also add to lrat_chain).
+//
 bool Internal::inst_propagate () {      // Adapted from 'propagate'.
   START (propagate);
   int64_t before = propagated;
@@ -73,8 +78,20 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
       const signed char b = val (w.blit);
       if (b > 0) continue;
       if (w.binary ()) {
-        if (b < 0) { ok = false; LOG (w.clause, "conflict"); break; }
-        else inst_assign (w.blit);
+        if (b < 0) { 
+          ok = false;
+          LOG (w.clause, "conflict");
+          if (opts.lratdirect) {
+            lrat_chain.push_back (w.clause->id);
+          }
+          break;
+        }
+        else {
+          if (opts.lratdirect) {
+            lrat_chain.push_back (w.clause->id);
+          }
+          inst_assign (w.blit);
+        }
       } else {
         literal_iterator lits = w.clause->begin ();
         const int other = lits[0]^lits[1]^lit;
@@ -108,10 +125,16 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
             j--;
           } else if (!u) {
             assert (v < 0);
+            if (opts.lratdirect) {
+              lrat_chain.push_back (w.clause->id);
+            }
             inst_assign (other);
           } else {
             assert (u < 0);
             assert (v < 0);
+            if (opts.lratdirect) {
+              lrat_chain.push_back (w.clause->id);
+            }
             LOG (w.clause, "conflict");
             ok = false;
             break;
@@ -166,6 +189,8 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
     if (tmp) { assert (tmp < 0); continue; }
     inst_assign (-other);                       // Assume other to false.
   }
+  assert (lrat_chain.empty ());
+  if (opts.lratdirect) lrat_chain.push_back (c->id);
   bool ok = inst_propagate ();                  // Propagate.
   while (trail.size () > before) {              // Backtrack.
     const int other = trail.back ();
@@ -177,12 +202,17 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   propagated = before;
   assert (level == 1);
   level = 0;
-  if (ok) { LOG ("instantiation failed"); return false; }
+  if (ok) {
+    lrat_chain.clear ();
+    LOG ("instantiation failed");
+    return false;
+  }
   unwatch_clause (c);
   // TODO: only place we need lrat... we can do smth similar as in vivify but
   // we actually need to remember reason clauses...
   strengthen_clause (c, lit);
   watch_clause (c);
+  lrat_chain.clear ();
   assert (c->size > 1);
   LOG ("instantiation succeeded");
   stats.instantiated++;

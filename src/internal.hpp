@@ -55,6 +55,7 @@ extern "C" {
 #include "config.hpp"
 #include "contract.hpp"
 #include "cover.hpp"
+#include "decompose.hpp"
 #include "elim.hpp"
 #include "ema.hpp"
 #include "external.hpp"
@@ -939,6 +940,7 @@ struct Internal {
     // Detect strongly connected components in the binary implication graph
     // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
     //
+    void decompose_analyze_lrat (DFS * dfs, int start, bool clear);
     bool decompose_round();
     void decompose();
 
