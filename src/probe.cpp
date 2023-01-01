@@ -45,9 +45,20 @@ void Internal::probe_dominator_lrat (int dom, int lit) {
   if (!opts.lratdirect || !dom || !lit) return;
   LOG ("probe dominator lrat from %d to %d", lit, dom);
   for (; lit != dom;) {
-    Var * v = &var (lit);
-    assert (v->reason);
-    lrat_chain.push_back (v->reason->id);
+    Var v = var (lit);
+    Clause * reason = v.reason;
+    assert (reason);
+    for (auto unit : *reason) {
+      if (val (unit) >= 0) continue;
+      Var u = var (unit);
+      if (u.level) continue;
+      const unsigned uidx = vlit (-unit);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      lrat_chain.push_back (id);
+      continue;
+    }
+    lrat_chain.push_back (reason->id);
     lit = get_parent_reason_literal (lit);
     assert (lit);
   }
