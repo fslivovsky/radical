@@ -8,9 +8,14 @@ namespace CaDiCaL {
 // is cleared such that all seen literals will become roots as well
 //
 void Internal::decompose_analyze_lrat (DFS * dfs, int start, bool clear) {
-  for (int lit = start; lit;) {
+  for (int lit = start;;) {
+    LOG ("decompose analyzing %d", lit);
     DFS & lit_dfs = dfs[vlit (lit)];
     lit = lit_dfs.parent;
+    if (!lit) {
+      assert (!lit_dfs.id);
+      return;
+    }
     uint64_t id = lit_dfs.id;
     assert (id);
     if (!clear) {
@@ -199,7 +204,7 @@ bool Internal::decompose_round () {
               if (child_dfs.idx) continue;
               if (opts.lratdirect) {
                 child_dfs.id = w.clause->id;
-                child_dfs.parent = w.blit;
+                child_dfs.parent = parent;
               }
               work.push_back (child);
             }
@@ -274,7 +279,7 @@ bool Internal::decompose_round () {
           else if (!tmp) {
             mark (other);
             clause.push_back (other);
-            if (opts.lratdirect)                          // should compute lrat_chain
+            if (opts.lratdirect)       // should compute lrat_chain
               decompose_analyze_lrat (dfs, lit, false);   // from lit to other
           }
         }

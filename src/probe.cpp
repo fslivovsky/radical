@@ -54,7 +54,7 @@ int Internal::probe_dominator (int a, int b) {
   assert (val (l) > 0), assert (val (k) > 0);
   assert (u->level == 1), assert (v->level == 1);
   while (l != k) {
-    if (opts.lratdirect) lrat_chain.push_back (v->reason->id);         // prob not correct
+    if (opts.lratdirect && v->reason) lrat_chain.push_back (v->reason->id);         // prob not correct
     if (u->trail > v->trail) swap (l, k), swap (u, v);
     if (!get_parent_reason_literal (l)) return l;
     int parent = get_parent_reason_literal (k);
