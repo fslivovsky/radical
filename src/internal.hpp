@@ -189,6 +189,7 @@ struct Internal {
   vector<Watches> wtab;         // table of watches for all literals
   Clause * conflict;            // set in 'propagation', reset in 'analyze'
   Clause * ignore;              // ignored during 'vivify_propagate'
+  Clause * probe_reason;        // set during probing
   size_t propagated;            // next trail position to propagate
   size_t propagated2;           // next binary trail position to propagate
   size_t best_assigned;         // best maximum assigned ever
@@ -910,6 +911,7 @@ struct Internal {
     //
     bool probing();
     void failed_literal(int lit);
+    void probe_lrat_for_units (int lit);
     void probe_assign_unit(int lit);
     void probe_assign_decision(int lit);
     void probe_assign(int lit, int parent);

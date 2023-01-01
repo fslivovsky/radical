@@ -2,13 +2,6 @@
 
 namespace CaDiCaL {
 
-// This implements Tarjan's algorithm for decomposing the binary implication
-// graph intro strongly connected components (SCCs).  Literals in one SCC
-// are equivalent and we replace them all by the literal with the smallest
-// index in the SCC.  These variables are marked 'substituted' and will be
-// removed from all clauses.  Their value will be fixed during 'extend'.
-
-
 
 // compute lrat_chain from a given starting literal to root
 // if clear is set the result is pushed to mini_chain instead and dfs
