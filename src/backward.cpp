@@ -109,7 +109,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             if (unit) { unit = INT_MIN; break; }
             else unit = lit;
           }
-          if (opts.lratdirect) {                 // TODO: not 100% sure on order
+          if (opts.lratdirect) {
             lrat_chain.push_back (c->id);
             lrat_chain.push_back (d->id);
           }

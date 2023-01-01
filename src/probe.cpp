@@ -37,6 +37,22 @@ inline void Internal::set_parent_reason_literal (int lit, int reason) {
   parents[idx] = reason;
 }
 
+/*-----------------------------------------------------------------------*/
+
+// compute lrat_chain for the part of the tree from lit to dom
+//
+void Internal::probe_dominator_lrat (int dom, int lit) {
+  if (!opts.lratdirect || !dom || !lit) return;
+  LOG ("probe dominator lrat from %d to %d", lit, dom);
+  for (; lit != dom;) {
+    Var * v = &var (lit);
+    assert (v->reason);
+    lrat_chain.push_back (v->reason->id);
+    lit = get_parent_reason_literal (lit);
+    assert (lit);
+  }
+}
+
 /*------------------------------------------------------------------------*/
 
 // On-the-fly (dynamic) hyper binary resolution on decision level one can
@@ -54,7 +70,6 @@ int Internal::probe_dominator (int a, int b) {
   assert (val (l) > 0), assert (val (k) > 0);
   assert (u->level == 1), assert (v->level == 1);
   while (l != k) {
-    if (opts.lratdirect && v->reason) lrat_chain.push_back (v->reason->id);         // prob not correct
     if (u->trail > v->trail) swap (l, k), swap (u, v);
     if (!get_parent_reason_literal (l)) return l;
     int parent = get_parent_reason_literal (k);
@@ -143,7 +158,10 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
       lrat_chain.push_back (id);
       continue;
     }
+    int old_dom = dom;
     dom = probe_dominator (dom, other);
+    probe_dominator_lrat (dom, old_dom);
+    probe_dominator_lrat (dom, other);
     non_root_level_literals++;
   }
   probe_reason = reason;
@@ -238,8 +256,8 @@ void Internal::probe_assign_unit (int lit) {
 //
 inline void Internal::probe_lrat_for_units (int lit) {
   if (!opts.lratdirect) return;
-  LOG ("building chain for units");
   if (level) return;                 // not decision level 0
+  LOG ("building chain for units");
   assert (lrat_chain.empty ());
   assert (probe_reason);
   for (auto & reason_lit : *probe_reason) {
@@ -400,8 +418,12 @@ void Internal::failed_literal (int failed) {
       lrat_chain.push_back (id);
       continue;
     }
+    int old_uip = uip;
     uip = uip ? probe_dominator (uip, other) : other;
+    probe_dominator_lrat (uip, old_uip);
+    probe_dominator_lrat (uip, other);
   }
+  if (opts.lratdirect) lrat_chain.push_back (conflict->id);
   LOG ("found probing UIP %d", uip);
   assert (uip);
 

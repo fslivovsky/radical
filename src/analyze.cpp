@@ -29,9 +29,6 @@ void Internal::learn_empty_clause () {
   lrat_chain.clear ();
 }
 
-// TODO: I would like to build lrat here (or at least closer to this)
-// but we need the reason clause, which is not passed down...
-//
 void Internal::learn_unit_clause (int lit) {
   LOG ("learned unit clause %d", lit);
   external->check_learned_unit_clause (lit);

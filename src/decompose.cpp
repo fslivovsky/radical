@@ -143,8 +143,8 @@ bool Internal::decompose_round () {
                     }
                     mini_chain.clear ();
                   }
-                  assign_unit (parent);                // TODO: lrat
-                  learn_empty_clause ();               // we have to assign conflict :/
+                  assign_unit (parent);
+                  learn_empty_clause ();
                   lrat_chain.clear ();
                 } else {
                   if (abs (other) < abs (repr)) repr = other;
@@ -315,7 +315,10 @@ bool Internal::decompose_round () {
       assert (c->size > 2);
       if (!c->redundant) mark_removed (c);
       if (proof) {
-        proof->add_derived_clause (++clause_id, clause);    // TODO: lrat_chain...
+        if (opts.lratdirect)
+          proof->add_derived_clause (++clause_id, clause, lrat_chain);
+        else                                              
+          proof->add_derived_clause (++clause_id, clause);                          
         proof->delete_clause (c);
         c->id = clause_id;
       }
