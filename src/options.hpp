@@ -107,7 +107,7 @@ LOGOPT( logsort,           0,  0,  1,0,0,0,0, "sort logged clauses") \
 OPTION( lrat,              1,  1,  1,0,0,0,1, "use lrat proof format") \
 OPTION( lratdirect,        1,  1,  1,0,0,0,1, "direct lrat wherever possible") \
 OPTION( lratdirectcompare, 0,  0,  1,0,0,0,1, "compare direct lrat vs lratbuilder") \
-OPTION( lratfrat,          0,  0,  1,0,0,0,1, "use frat proof format") \
+OPTION( lratfrat,          0,  0,  0,0,0,0,1, "use frat proof format") \
 OPTION( lratfratpartial,   0,  0,  1,0,0,0,1, "do not use lratbuilder") \
 OPTION( lucky,             1,  0,  1,0,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,0,1, "minimize learned clauses") \

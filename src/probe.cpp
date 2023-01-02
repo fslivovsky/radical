@@ -417,11 +417,6 @@ void Internal::failed_literal (int failed) {
     const int other = -lit;
     if (!var (other).level) {
       assert (val (other) > 0);
-      if (!opts.lratdirect) continue;
-      const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
-      assert (id);
-      lrat_chain.push_back (id);
       continue;
     }
     uip = uip ? probe_dominator (uip, other) : other;
@@ -461,6 +456,9 @@ void Internal::failed_literal (int failed) {
     } else {
       LOG ("found unassigned failed parent %d", parent);
       // TODO: lrat ??
+      if (opts.lratdirect)                  // should be correct since parent was assigned before...
+        probe_reason = var (parent).reason;
+      probe_lrat_for_units (-parent);
       probe_assign_unit (-parent);
       if (!probe_propagate ()) learn_empty_clause ();
     }

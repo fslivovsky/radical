@@ -12,7 +12,7 @@ void Internal::new_proof_on_demand () {
   if (!proof) {
     proof = new Proof (this, opts.lratdirectcompare);
     LOG ("connecting proof to internal solver");
-    // build_full_lrat ();                           TODO: uncomment or change options
+    //build_full_lrat ();                    //       TODO: uncomment or change options
   }
 }
 
@@ -326,8 +326,8 @@ void Proof::add_derived_clause () {
       if (compare) {
         vector<uint64_t> chain_too = lratbuilder->add_clause_get_proof (clause_id, clause);
         LOG ("PROOF comparing lrat");
-        LOG (chain_too,   "PROOF compare direct lrat: ");
-        LOG (proof_chain, "PROOF compare lratbuilder: ");
+        LOG (proof_chain,   "PROOF compare direct lrat: ");
+        LOG (chain_too, "PROOF compare lratbuilder: ");
         // TODO: log
         if (chain_too.size () < proof_chain.size ()) {
           proof_chain = chain_too;                // always use shorter proof
