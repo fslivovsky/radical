@@ -422,7 +422,11 @@ void Internal::failed_literal (int failed) {
     uip = uip ? probe_dominator (uip, other) : other;
   }
   probe_dominator_lrat (uip, conflict);
-  if (opts.lratdirect) clear_analyzed_literals ();
+  Clause * uip_reason = 0;
+  if (opts.lratdirect) {
+    uip_reason = var (uip).reason;
+    clear_analyzed_literals ();
+  }
 
   LOG ("found probing UIP %d", uip);
   assert (uip);
@@ -445,18 +449,30 @@ void Internal::failed_literal (int failed) {
 
   if (!probe_propagate ()) learn_empty_clause ();
 
+  if (opts.lratdirect) reverse (work.begin (), work.end ());
   while (!unsat && !work.empty ()) {
     const int parent = work.back ();
     work.pop_back ();
     const signed char tmp = val (parent);
     if (tmp < 0) continue;
     if (tmp > 0) {
+      if (opts.lratdirect) {
+        assert (uip_reason);
+        probe_dominator_lrat (parent, uip_reason);
+        clear_analyzed_literals ();
+      }
       LOG ("clashing failed parent %d", parent);
       learn_empty_clause ();
     } else {
       LOG ("found unassigned failed parent %d", parent);
-      // TODO: lrat ??
+      if (opts.lratdirect) {
+        assert (uip_reason);
+        probe_dominator_lrat (parent, uip_reason);
+        uip_reason = var (parent).reason;
+        clear_analyzed_literals ();
+      }
       probe_assign_unit (-parent);
+      lrat_chain.clear ();
       if (!probe_propagate ()) learn_empty_clause ();
     }
   }
