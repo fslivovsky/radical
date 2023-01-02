@@ -43,10 +43,18 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
   unsigned size = 0;
   int best = 0;
   bool satisfied = false;
+  assert (mini_chain.empty ());
   for (const auto & lit : *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = true; break; }
-    if (tmp < 0) continue;
+    if (tmp < 0) {
+      if (!opts.lratdirect) continue;
+      const unsigned uidx = vlit (-lit);
+      uint64_t id = unit_clauses[uidx];
+      assert (id);
+      mini_chain.push_back (id);
+      continue;
+    }
     size_t l = occs (lit).size ();
     LOG ("literal %d occurs %zd times", lit, l);
     if (l < len) best = lit, len = l;
@@ -110,8 +118,11 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             else unit = lit;
           }
           if (opts.lratdirect) {
-            lrat_chain.push_back (c->id);
+            for (auto p : mini_chain) {
+              lrat_chain.push_back (p);
+            }
             lrat_chain.push_back (d->id);
+            lrat_chain.push_back (c->id);
           }
           assert (unit);
           if (satisfied) {
@@ -136,6 +147,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
       }
     }
   }
+  mini_chain.clear ();
   unmark (c);
 }
 
