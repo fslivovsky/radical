@@ -28,8 +28,10 @@ void Internal::decompose_analyze_lrat (DFS * dfs, int child, Clause * reason) {
       lrat_chain.push_back (id);
       continue;
     }
-    DFS & lit_dfs = dfs[vlit (other)];
-    decompose_analyze_lrat (dfs, other, lit_dfs.parent);
+    DFS & lit_dfs = dfs[vlit (lit)];
+    Clause * c = lit_dfs.parent;
+    if (c)
+      decompose_analyze_lrat (dfs, other, c);
   }
   lrat_chain.push_back (reason->id);
 }

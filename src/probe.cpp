@@ -456,9 +456,6 @@ void Internal::failed_literal (int failed) {
     } else {
       LOG ("found unassigned failed parent %d", parent);
       // TODO: lrat ??
-      if (opts.lratdirect)                  // should be correct since parent was assigned before...
-        probe_reason = var (parent).reason;
-      probe_lrat_for_units (-parent);
       probe_assign_unit (-parent);
       if (!probe_propagate ()) learn_empty_clause ();
     }
