@@ -40,28 +40,32 @@ inline void Internal::set_parent_reason_literal (int lit, int reason) {
 /*-----------------------------------------------------------------------*/
 
 // compute lrat_chain for the part of the tree from lit to dom
+// use mini_chain because it needs to be reversed
 //
-void Internal::probe_dominator_lrat (int dom, int lit) {
-  if (!opts.lratdirect || !dom || !lit) return;
-  LOG ("probe dominator lrat from %d to %d", lit, dom);
-  for (; lit != dom;) {
-    Var v = var (lit);
-    Clause * reason = v.reason;
-    assert (reason);
-    for (auto unit : *reason) {
-      if (val (unit) >= 0) continue;
-      Var u = var (unit);
-      if (u.level) continue;
-      const unsigned uidx = vlit (-unit);
-      uint64_t id = unit_clauses[uidx];
-      assert (id);
-      lrat_chain.push_back (id);
+void Internal::probe_dominator_lrat (int dom, Clause * reason) {
+  if (!opts.lratdirect || !dom) return;
+  LOG (reason, "probe dominator lrat for %d from", dom);
+
+  for (const auto lit : *reason) {
+    if (val (lit) >= 0) continue;
+    const auto other = -lit;
+    if (other == dom) continue;
+    Flags & f = flags (other);
+    if (f.seen) continue;
+    f.seen = true;
+    analyzed.push_back (other);
+    Var u = var (other);
+    if (u.level) {
+      if (!u.reason) continue;
+      probe_dominator_lrat (dom, u.reason);
       continue;
     }
-    lrat_chain.push_back (reason->id);
-    lit = get_parent_reason_literal (lit);
-    assert (lit);
+    const unsigned uidx = vlit (other);
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    lrat_chain.push_back (id);
   }
+  lrat_chain.push_back (reason->id);
 }
 
 /*------------------------------------------------------------------------*/
@@ -161,18 +165,8 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
   for (k = lits + 2; k != end; k++) {
     const int other = -*k;
     assert (val (other) > 0);
-    if (!var (other).level) {
-      if (!opts.lratdirect) continue;
-      const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
-      assert (id);
-      lrat_chain.push_back (id);
-      continue;
-    }
-    int old_dom = dom;
+    if (!var (other).level) continue;
     dom = probe_dominator (dom, other);
-    probe_dominator_lrat (dom, old_dom);
-    probe_dominator_lrat (dom, other);
     non_root_level_literals++;
   }
   probe_reason = reason;
@@ -187,18 +181,19 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     assert (clause.empty ());
     clause.push_back (-dom);
     clause.push_back (lits[0]);
-    if (opts.lratdirect) lrat_chain.push_back (reason->id);
+    probe_dominator_lrat (dom, reason);
+    if (opts.lratdirect) clear_analyzed_literals ();
     Clause * c = new_hyper_binary_resolved_clause (red, 2);
     probe_reason = c;
     if (red) c->hyper = true;
     clause.clear ();
+    lrat_chain.clear ();
     if (contained) {
       stats.hbrsubs++;
       LOG (reason, "subsumed original");
       mark_garbage (reason);
     }
   }
-  lrat_chain.clear ();
   return dom;
 }
 
@@ -429,12 +424,11 @@ void Internal::failed_literal (int failed) {
       lrat_chain.push_back (id);
       continue;
     }
-    int old_uip = uip;
     uip = uip ? probe_dominator (uip, other) : other;
-    probe_dominator_lrat (uip, old_uip);
-    probe_dominator_lrat (uip, other);
   }
-  if (opts.lratdirect) lrat_chain.push_back (conflict->id);
+  probe_dominator_lrat (uip, conflict);
+  if (opts.lratdirect) clear_analyzed_literals ();
+
   LOG ("found probing UIP %d", uip);
   assert (uip);
 
@@ -448,7 +442,6 @@ void Internal::failed_literal (int failed) {
   }
 
   backtrack ();
-  clear_analyzed_literals ();
   conflict = 0;
 
   assert (!val (uip));

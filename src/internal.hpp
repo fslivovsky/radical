@@ -918,7 +918,7 @@ struct Internal {
     void mark_duplicated_binary_clauses_as_garbage();
     int get_parent_reason_literal(int lit);
     void set_parent_reason_literal(int lit, int reason);
-    void probe_dominator_lrat (int dom, int lit);
+    void probe_dominator_lrat (int dom, Clause * reason);
     int probe_dominator(int a, int b);
     int hyper_binary_resolve(Clause *);
     void probe_propagate2();
