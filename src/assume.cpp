@@ -171,18 +171,23 @@ void Internal::failing () {
     //
     if (!unsat_constraint) {
       external->check_learned_clause ();
+      // TODO: lrat
+      /*
       if (proof) {
         proof->add_derived_clause (++clause_id, clause);
         proof->delete_clause (clause_id, clause);
       }
+      */
     } else {
       for (auto lit : constraint) {
         clause.push_back (-lit);
         external->check_learned_clause ();
+        /*
         if (proof) {
           proof->add_derived_clause (++clause_id, clause);
           proof->delete_clause (clause_id, clause);
         }
+        */
         clause.pop_back ();
       }
     }
