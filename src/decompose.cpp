@@ -3,21 +3,68 @@
 namespace CaDiCaL {
 
 
+void Internal::decompose_analyze_binary_chain (DFS * dfs, int from) {
+  if (!opts.lrat || opts.lratexternal) return;
+  LOG ("binary chain starting at %d", from);
+  DFS & from_dfs = dfs[vlit (from)];
+  Clause * reason = from_dfs.parent;
+  /*
+  if (val (from) > 0) {
+    const unsigned uidx = vlit (from);
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    mini_chain.push_back (id);
+    return;
+  }
+  */
+  if (!reason) return;
+  assert (reason->size == 2);
+  mini_chain.push_back (reason->id);
+  int other = reason->literals[0];
+  other = other == from ? -reason->literals[1] : -other;
+  Flags & f = flags (other);
+  if (f.seen) return;
+  f.seen = true;
+  analyzed.push_back (other);
+  decompose_analyze_binary_chain (dfs, other);
+}
+
+void Internal::decompose_conflicting_scc_lrat (DFS * dfs, vector<int> & scc, bool back) {
+  if (!opts.lrat || opts.lratexternal) return;
+  assert (lrat_chain.empty ());
+  assert (mini_chain.empty ());
+  assert (analyzed.empty ());
+  for (auto & lit : scc) {
+    decompose_analyze_binary_chain (dfs, lit);
+    /*
+    for (auto p = mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+      lrat_chain.push_back (*p);
+    }
+    */
+    if (back)
+      for (auto p = mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+        lrat_chain.push_back (*p);
+      }
+    else 
+      for (auto p : mini_chain) {
+        lrat_chain.push_back (p);
+      }
+    mini_chain.clear ();
+  }
+  clear_analyzed_literals ();
+}
+
 // compute lrat_chain from a given starting literal to root
 // if clear is set the result is pushed to mini_chain instead and dfs
 // is cleared such that all seen literals will become roots as well
 //
-void Internal::decompose_analyze_lrat (DFS * dfs, int child, Clause * reason, bool back) {
+void Internal::decompose_analyze_lrat (DFS * dfs, Clause * reason) {
   if (!opts.lrat || opts.lratexternal) return;
+  assert (lrat_chain.empty ());
   assert (reason);            // not sure yet.
-  LOG (reason, "decompose analyze child %d for", child);
-  if (back)
-    lrat_chain.push_back (reason->id);
+  assert (analyzed.empty ());
+  LOG (reason, "decompose analyze for");
   for (const auto lit : *reason) {
-    if (lit == child) {
-      assert (flags (lit).seen);
-      continue;
-    }
     const auto other = -lit;
     Flags & f = flags (other);
     if (f.seen) continue;
@@ -30,13 +77,15 @@ void Internal::decompose_analyze_lrat (DFS * dfs, int child, Clause * reason, bo
       lrat_chain.push_back (id);
       continue;
     }
-    DFS & lit_dfs = dfs[vlit (other)];
-    Clause * c = lit_dfs.parent;
-    if (c)
-      decompose_analyze_lrat (dfs, child, c, true);
+    assert (mini_chain.empty ());
+    decompose_analyze_binary_chain (dfs, other);
+    for (auto p = mini_chain.rbegin (); p < mini_chain.rend (); p++) {
+      lrat_chain.push_back (*p);
+    }
+    mini_chain.clear ();
   }
-  if (!back)
-    lrat_chain.push_back (reason->id);
+  lrat_chain.push_back (reason->id);
+  clear_analyzed_literals ();
 }
 
 
@@ -141,14 +190,17 @@ bool Internal::decompose_round () {
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
+                  decompose_conflicting_scc_lrat (dfs, scc, true);
+                  if (opts.lrat && !opts.lratexternal) parent = scc[0];
+                  assign_unit (-parent);
+                  decompose_conflicting_scc_lrat (dfs, scc, false);
                   if (opts.lrat && !opts.lratexternal) {
-                    Clause * reason = dfs[vlit (-parent)].parent;
-                    //decompose_analyze_lrat (dfs, 0, reason);
-                    reason = dfs[vlit (parent)].parent;
-                    //decompose_analyze_lrat (dfs, 0, reason);
-                    clear_analyzed_literals ();
+                    const unsigned uidx = vlit (-parent);
+                    uint64_t id = unit_clauses[uidx];
+                    assert (id);
+                    lrat_chain.push_back (id);
+                    reverse (lrat_chain.begin (), lrat_chain.end ());
                   }
-                  assign_unit (parent);
                   learn_empty_clause ();
                   lrat_chain.clear ();
                 } else {
@@ -279,10 +331,6 @@ bool Internal::decompose_round () {
           tmp = marked (other);
           if (tmp < 0) satisfied = true;
           else if (!tmp) {
-            if (opts.lrat && !opts.lratexternal) {
-              flags (other).seen = true;
-              analyzed.push_back (other);
-            }
             mark (other);
             clause.push_back (other);
           }
@@ -290,13 +338,9 @@ bool Internal::decompose_round () {
       }
     }
     if (!satisfied) {
-      decompose_analyze_lrat (dfs, 0, c, false);
+      decompose_analyze_lrat (dfs, c);
       LOG (lrat_chain, "lrat_chain: ");
     }
-    if (opts.lrat && !opts.lratexternal) {
-      clear_analyzed_literals ();
-    }
-
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);

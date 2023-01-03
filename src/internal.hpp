@@ -946,8 +946,9 @@ struct Internal {
     // Detect strongly connected components in the binary implication graph
     // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
     //
-    void decompose_analyze_lrat (DFS * dfs, int child, Clause * reason, bool back);
-    //void decompose_analyze_lrat (DFS * dfs, int end, int start, bool clear);
+    void decompose_conflicting_scc_lrat (DFS * dfs, vector<int>&, bool);
+    void decompose_analyze_binary_chain (DFS * dfs, int);
+    void decompose_analyze_lrat (DFS * dfs, Clause * reason);
     bool decompose_round();
     void decompose();
 
