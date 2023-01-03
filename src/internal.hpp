@@ -848,6 +848,7 @@ struct Internal {
 
     // Find gates in 'gates.cpp' for bounded variable substitution.
     //
+    int second_literal_in_binary_clause_lrat (Clause *, int first);
     int second_literal_in_binary_clause(Eliminator &, Clause *, int first);
     void mark_binary_literals(Eliminator &, int pivot);
     void find_and_gate(Eliminator &, int pivot);
@@ -864,7 +865,7 @@ struct Internal {
 
     void find_if_then_else(Eliminator &, int pivot);
 
-    Clause* find_binary_clause (Eliminator & eliminator, int, int);
+    Clause* find_binary_clause (int, int);
     void find_gate_clauses(Eliminator &, int pivot);
     void unmark_gate_clauses(Eliminator &);
 

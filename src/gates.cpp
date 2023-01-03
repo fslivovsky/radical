@@ -47,11 +47,31 @@ Internal::second_literal_in_binary_clause (Eliminator & eliminator,
 
 /*------------------------------------------------------------------------*/
 
+// need a copy from above that does not care about garbage
+
+int Internal::second_literal_in_binary_clause_lrat (Clause * c, int first)
+{
+  // TODO: this seems to work
+  assert (!c->garbage || c->size == 2);
+  int second = 0;
+  for (const auto & lit : *c) {
+    if (lit == first) continue;
+    const signed char tmp = val (lit);
+    if (!tmp) {
+      if (second) { second = INT_MIN; break; }
+      second = lit;
+    }
+  }
+  if (!second) return 0;
+  if (second == INT_MIN) return 0;
+  return second;
+}
+
 // I needed to find the second clause for hyper unary resultion to build lrat
 // this is not efficient but I could not find a better way then just finding
 // the corresponding clause in all possible clauses
 //
-Clause * Internal::find_binary_clause (Eliminator & eliminator, int first, int second) {
+Clause * Internal::find_binary_clause (int first, int second) {
   int best = first;
   int other = second;
   if (occs (first).size () > occs (second).size ()) {
@@ -59,7 +79,7 @@ Clause * Internal::find_binary_clause (Eliminator & eliminator, int first, int s
     other = first;
   }
   for (auto c : occs (best))
-    if (second_literal_in_binary_clause (eliminator, c, best) == other)
+    if (second_literal_in_binary_clause_lrat (c, best) == other)
       return c;
   return 0;
 }
@@ -89,7 +109,7 @@ void Internal::mark_binary_literals (Eliminator & eliminator, int first) {
     if (tmp < 0) {
       LOG ("found binary resolved unit %d", first);
       if (opts.lrat && !opts.lratexternal) {
-        Clause * d = find_binary_clause (eliminator, first, -second);
+        Clause * d = find_binary_clause (first, -second);
         assert (d);
         for (auto & lit : *d) {
           if (lit == first || lit == -second) continue;
@@ -165,7 +185,7 @@ void Internal::find_equivalence (Eliminator & eliminator, int pivot) {
     if (tmp > 0) {
       LOG ("found binary resolved unit %d", second);
       if (opts.lrat && !opts.lratexternal) {
-        Clause * d = find_binary_clause (eliminator, pivot, second);
+        Clause * d = find_binary_clause (pivot, second);
         assert (d);
         for (auto & lit : *d) {
           if (lit == pivot || lit == second) continue;
