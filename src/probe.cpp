@@ -104,9 +104,6 @@ void Internal::probe_dominator_lrat (int dom, Clause * reason) {
 // On-the-fly (dynamic) hyper binary resolution on decision level one can
 // make use of the fact that the implication graph is actually a tree.
 
-// TODO: we need to actually remember reason clauses in order to build lrat
-// in probe_dominator
-
 // Compute a dominator of two literals in the binary implication tree.
 
 int Internal::probe_dominator (int a, int b) {
@@ -201,7 +198,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     non_root_level_literals++;
   }
   probe_reason = reason;
-  if (non_root_level_literals && opts.probehbr) { // !(A)
+  if (non_root_level_literals && ((opts.lrat && !opts.lratexternal) || opts.probehbr)) { // !(A)
     bool contained = false;
     for (k = lits + 1; !contained && k != end; k++)
       contained = (*k == -dom);
@@ -442,7 +439,7 @@ void Internal::failed_literal (int failed) {
   START (analyze);
 
   LOG (conflict, "analyzing failed literal conflict");
-
+  
   int uip = 0;
   for (const auto & lit : *conflict) {
     const int other = -lit;
@@ -518,6 +515,8 @@ void Internal::failed_literal (int failed) {
     }
   }
   erase_vector (work);
+  work_reasons.clear ();
+  erase_vector (work_reasons);
 
   STOP (analyze);
 
