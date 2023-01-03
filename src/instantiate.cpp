@@ -55,6 +55,7 @@ inline void Internal::inst_assign (int lit) {
   vals[lit] = 1;
   vals[-lit] = -1;
   trail.push_back (lit);
+  // TODO: for lrat mark lits as seen
 }
 
 // since we do not actually remember reasons we cannot do conflict analysis
@@ -126,14 +127,14 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
           } else if (!u) {
             assert (v < 0);
             if (opts.lrat && !opts.lratexternal) {
-              lrat_chain.push_back (w.clause->id);
-            }
+              lrat_chain.push_back (w.clause->id);             // TODO for lrat: add potential units in w.clause
+            }                                                  // to lrat_chain and mark lits as seen
             inst_assign (other);
           } else {
             assert (u < 0);
             assert (v < 0);
             if (opts.lrat && !opts.lratexternal) {
-              lrat_chain.push_back (w.clause->id);
+              lrat_chain.push_back (w.clause->id);  // TODO: same
             }
             LOG (w.clause, "conflict");
             ok = false;
@@ -202,6 +203,7 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   propagated = before;
   assert (level == 1);
   level = 0;
+  // TODO: for lrat clear analyzed literals
   if (ok) {
     lrat_chain.clear ();
     LOG ("instantiation failed");
@@ -210,6 +212,8 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   unwatch_clause (c);
   // TODO: only place we need lrat... we can do smth similar as in vivify but
   // we actually need to remember reason clauses...
+  // TODO: units are not added to lrat_chain...
+  LOG (lrat_chain, "instantiate proof chain");
   strengthen_clause (c, lit);
   watch_clause (c);
   lrat_chain.clear ();
