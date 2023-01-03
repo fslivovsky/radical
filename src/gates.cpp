@@ -52,7 +52,7 @@ Internal::second_literal_in_binary_clause (Eliminator & eliminator,
 int Internal::second_literal_in_binary_clause_lrat (Clause * c, int first)
 {
   // TODO: this seems to work
-  assert (!c->garbage || c->size == 2);
+  if (c->garbage) return 0;
   int second = 0;
   for (const auto & lit : *c) {
     if (lit == first) continue;
