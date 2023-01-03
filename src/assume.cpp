@@ -133,7 +133,18 @@ void Internal::failing () {
       const int lit = analyzed[next++];
       assert (val (lit) > 0);
       Var & v = var (lit);
-      if (!v.level) continue;
+      if (!v.level) {
+        if (!opts.lrat || opts.lratexternal) continue;
+        Flags & f = flags (lit);
+        if (f.seen) continue;
+        f.seen = true;
+        analyzed.push_back (lit);
+        const unsigned uidx = vlit (lit);
+        uint64_t id = unit_clauses[uidx];
+        assert (id);
+        lrat_chain.push_back (id);
+        continue;
+      }
 
       if (v.reason) {
         assert (v.level);
@@ -144,6 +155,9 @@ void Internal::failing () {
           f.seen = true;
           assert (val (other) < 0);
           analyzed.push_back (-other);
+          if (opts.lrat && !opts.lratexternal) {
+            lrat_chain.push_back (v.reason->id);
+          }
         }
       } else {
         assert (assumed (lit));
@@ -172,9 +186,14 @@ void Internal::failing () {
     if (!unsat_constraint) {
       external->check_learned_clause ();
       // TODO: lrat
-      /*
+      /* TODO: need depth first search for analyze in order to get correct proof chains
       if (proof) {
-        proof->add_derived_clause (++clause_id, clause);
+        if (opts.lrat && !opts.lratexternal) {
+          LOG (lrat_chain, "assume proof chain without constraint");
+          proof->add_derived_clause (++clause_id, clause, lrat_chain);
+        }
+        else
+          proof->add_derived_clause (++clause_id, clause);
         proof->delete_clause (clause_id, clause);
       }
       */
@@ -182,16 +201,21 @@ void Internal::failing () {
       for (auto lit : constraint) {
         clause.push_back (-lit);
         external->check_learned_clause ();
-        /*
+        /* TODO: need depth first search for analyze in order to get correct proof chains
         if (proof) {
-          proof->add_derived_clause (++clause_id, clause);
+          if (opts.lrat && !opts.lratexternal) {
+            LOG (lrat_chain, "assume proof chain with constraints");
+            proof->add_derived_clause (++clause_id, clause, lrat_chain);
+          }
+          else
+            proof->add_derived_clause (++clause_id, clause);
           proof->delete_clause (clause_id, clause);
         }
         */
         clause.pop_back ();
       }
     }
-
+    lrat_chain.clear ();
     clause.clear ();
   }
 
