@@ -161,7 +161,7 @@ void Internal::strengthen_clause (Clause * c, int lit) {
   assert (c->size > 2);
   LOG (c, "removing %d in", lit);
   if (proof) {
-    if (opts.lratdirect) proof->strengthen_clause (c, lit, lrat_chain);
+    if (opts.lrat && !opts.lratexternal) proof->strengthen_clause (c, lit, lrat_chain);
     else proof->strengthen_clause (c, lit);
   }
   if (!c->redundant) mark_removed (lit);
@@ -275,7 +275,7 @@ Internal::try_to_subsume_clause (Clause * c, vector<Clause *> & shrunken) {
 
   if (flipped) {
     LOG (d, "strengthening");
-    if (opts.lratdirect) {
+    if (opts.lrat && !opts.lratexternal) {
       assert (lrat_chain.empty ());
       lrat_chain.push_back (c->id);
       lrat_chain.push_back (d->id);

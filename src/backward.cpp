@@ -48,7 +48,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = true; break; }
     if (tmp < 0) {
-      if (!opts.lratdirect) continue;
+      if (!opts.lrat || opts.lratexternal) continue;
       const unsigned uidx = vlit (-lit);
       uint64_t id = unit_clauses[uidx];
       assert (id);
@@ -105,7 +105,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
           for (const auto & lit : * d) {
             const signed char tmp = val (lit);
             if (tmp < 0) {
-              if (!opts.lratdirect) continue;
+              if (!opts.lrat || opts.lratexternal) continue;
               const unsigned uidx = vlit (-lit);
               uint64_t id = unit_clauses[uidx];
               assert (id);
@@ -117,7 +117,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             if (unit) { unit = INT_MIN; break; }
             else unit = lit;
           }
-          if (opts.lratdirect) {
+          if (opts.lrat && !opts.lratexternal) {
             for (auto p : mini_chain) {
               lrat_chain.push_back (p);
             }

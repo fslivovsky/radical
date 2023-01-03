@@ -267,7 +267,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) {
-      if (!opts.lratdirect) continue;
+      if (!opts.lrat || opts.lratexternal) continue;
       const unsigned uidx = vlit (-lit);
       uint64_t id = unit_clauses[uidx];
       assert (id);
@@ -295,7 +295,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     signed char tmp = val (lit);
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) {
-      if (!opts.lratdirect) continue;
+      if (!opts.lrat || opts.lratexternal) continue;
       const unsigned uidx = vlit (-lit);
       uint64_t id = unit_clauses[uidx];
       assert (id);
@@ -310,7 +310,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   unmark (c);
   const int64_t size = clause.size ();
   
-  if (opts.lratdirect) {
+  if (opts.lrat && !opts.lratexternal) {
     lrat_chain.push_back (d->id);
     lrat_chain.push_back (c->id);
   }
@@ -356,7 +356,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
   }
 
   LOG (clause, "resolvent");
-  assert (!opts.lratdirect || !lrat_chain.empty ());
+  assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
 
   // Double self-subsuming resolution.  The clauses 'c' and 'd' are
   // identical except for the pivot which occurs in different phase.  The
@@ -509,7 +509,7 @@ Internal::elim_add_resolvents (Eliminator & eliminator, int pivot) {
       if (d->garbage) continue;
       if (substitute && c->gate == d->gate) continue;
       if (!resolve_clauses (eliminator, c, pivot, d, false)) continue;
-      assert (!opts.lratdirect || !lrat_chain.empty ());
+      assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
       Clause * r = new_resolved_irredundant_clause ();  // TODO: clear lrat_chain afterwards (or better
       elim_update_added_clause (eliminator, r);         // clear it in new_resolved_irredundant_clause.
       eliminator.enqueue (r);

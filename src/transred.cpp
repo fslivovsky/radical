@@ -124,7 +124,7 @@ void Internal::transred () {
     size_t j = 0;                       // 'propagated' in BFS
 
     assert (lrat_chain.empty ());
-    if (opts.lratdirect) lrat_chain.push_back (c->id);
+    if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (c->id);
 
     while (!transitive && !failed && j < work.size ()) {
       const int lit = work[j++];
@@ -147,11 +147,11 @@ void Internal::transred () {
           const int tmp = marked (other);
           if (tmp > 0) continue;
           else if (tmp < 0) {
-            if (opts.lratdirect) lrat_chain.push_back (d->id);
+            if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (d->id);
             LOG ("found both %d and %d reachable", -other, other);
             failed = true;
           } else {
-            if (opts.lratdirect) lrat_chain.push_back (d->id);
+            if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (d->id);
             mark (other);
             work.push_back (other);
             LOG ("transred assign %d", other);

@@ -410,7 +410,7 @@ namespace CaDiCaL {
     // for direct lrat we remember how the clause used to look
     vector<int> old_clause_lrat;
     assert (minimize_chain.empty ());
-    if (opts.lratdirect)
+    if (opts.lrat && !opts.lratexternal)
       for (auto & i : clause)
         old_clause_lrat.push_back (i);
 
@@ -429,7 +429,7 @@ namespace CaDiCaL {
       for (std::vector<int>::size_type j = 1; j < clause.size(); ++j) {
         assert(i <= j);
         clause[i] = clause[j];
-        if (opts.lratdirect) {
+        if (opts.lrat && !opts.lratexternal) {
           assert (j < old_clause_lrat.size ());
           assert (mini_chain.empty ());
           if (clause[j] != old_clause_lrat[j]) {

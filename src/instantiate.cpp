@@ -81,13 +81,13 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
         if (b < 0) { 
           ok = false;
           LOG (w.clause, "conflict");
-          if (opts.lratdirect) {
+          if (opts.lrat && !opts.lratexternal) {
             lrat_chain.push_back (w.clause->id);
           }
           break;
         }
         else {
-          if (opts.lratdirect) {
+          if (opts.lrat && !opts.lratexternal) {
             lrat_chain.push_back (w.clause->id);
           }
           inst_assign (w.blit);
@@ -125,14 +125,14 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
             j--;
           } else if (!u) {
             assert (v < 0);
-            if (opts.lratdirect) {
+            if (opts.lrat && !opts.lratexternal) {
               lrat_chain.push_back (w.clause->id);
             }
             inst_assign (other);
           } else {
             assert (u < 0);
             assert (v < 0);
-            if (opts.lratdirect) {
+            if (opts.lrat && !opts.lratexternal) {
               lrat_chain.push_back (w.clause->id);
             }
             LOG (w.clause, "conflict");
@@ -190,7 +190,7 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
     inst_assign (-other);                       // Assume other to false.
   }
   assert (lrat_chain.empty ());
-  if (opts.lratdirect) lrat_chain.push_back (c->id);
+  if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (c->id);
   bool ok = inst_propagate ();                  // Propagate.
   while (trail.size () > before) {              // Backtrack.
     const int other = trail.back ();

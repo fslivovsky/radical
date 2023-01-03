@@ -741,7 +741,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
             if (!clause.empty ()) stats.vivifystred2++;
           }
           clear_analyzed_literals ();
-          if (opts.lratdirect) {
+          if (opts.lrat && !opts.lratexternal) {
             assert (lrat_chain.empty ());
             vivify_build_lrat (lit, v.reason);
             clear_analyzed_literals ();
@@ -787,7 +787,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
           if (!clause.empty ()) stats.vivifystred3++;
         }
         clear_analyzed_literals ();
-        if (opts.lratdirect) {
+        if (opts.lrat && !opts.lratexternal) {
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, conflict);
           clear_analyzed_literals ();
@@ -813,7 +813,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
 
       if (!clause.empty ()) {
 
-        assert (!opts.lratdirect || !lrat_chain.empty ());
+        assert (!opts.lrat || opts.lratexternal || !lrat_chain.empty ());
         LOG ("strengthening instead of subsuming clause");
         vivify_strengthen (c);
 
@@ -878,7 +878,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     if (redundant_mode) stats.vivifystred1++;
     else                stats.vivifystrirr++;
 
-    if (opts.lratdirect) {
+    if (opts.lrat && !opts.lratexternal) {
       assert (lrat_chain.empty ());
       vivify_build_lrat (0, c);
       clear_analyzed_literals ();

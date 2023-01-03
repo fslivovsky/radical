@@ -49,7 +49,7 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
 // inlined because mostly called inside of propagate hjm TODO :/
 //
 void Internal::build_chain_for_units (int lit, Clause * reason) {
-  if (!opts.lratdirect) return;
+  if (!opts.lrat || opts.lratexternal) return;
   LOG ("building chain for units");
   if (opts.chrono && assignment_level (lit, reason)) return;
   else if (!opts.chrono && level) return;   // not decision level 0
@@ -70,7 +70,7 @@ void Internal::build_chain_for_units (int lit, Clause * reason) {
 // TODO: not inlined because its used in vivify. Bad??
 //
 void Internal::build_chain_for_empty () {
-  if (!opts.lratdirect || !lrat_chain.empty ()) return;
+  if (!opts.lrat || opts.lratexternal || !lrat_chain.empty ()) return;
   assert (!level);
   assert (lrat_chain.empty ());
   assert (conflict);
@@ -96,7 +96,7 @@ inline void Internal::search_assign (int lit, Clause * reason) {
   Var & v = var (idx);
   int lit_level;
   
-  assert (!opts.lratdirect || level || reason == decision_reason || !lrat_chain.empty ());
+  assert (!opts.lrat || opts.lratexternal || level || reason == decision_reason || !lrat_chain.empty ());
 
   // The following cases are explained in the two comments above before
   // 'decision_reason' and 'assignment_level'.

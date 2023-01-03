@@ -10,20 +10,18 @@ using namespace std;
 
 void Internal::new_proof_on_demand () {
   if (!proof) {
-    proof = new Proof (this, opts.lratdirectcompare);
+    proof = new Proof (this);
     LOG ("connecting proof to internal solver");
-    //build_full_lrat ();                    //       TODO: uncomment or change options
+    build_full_lrat ();
   }
 }
 
 void Internal::build_full_lrat () {
-  // if (lratbuilder) return;
-  assert (!lratbuilder);                            // 99% sure this is correct
-  if (opts.lrat && !opts.lratfratpartial) {
-    lratbuilder = new LratBuilder (this);
-    LOG ("PROOF connecting lrat proof chain builder");
-    proof->connect (lratbuilder);
-  }
+  assert (!lratbuilder);
+  if (!opts.lratexternal) return;
+  lratbuilder = new LratBuilder (this);
+  LOG ("PROOF connecting lrat proof chain builder");
+  proof->connect (lratbuilder);
 }
 
 // Enable proof tracing.
@@ -69,7 +67,7 @@ void Internal::flush_trace () {
 
 /*------------------------------------------------------------------------*/
 
-Proof::Proof (Internal * s, bool c) : internal (s), compare (c), checker (0),
+Proof::Proof (Internal * s) : internal (s), checker (0),
   tracer (0), lratbuilder (0), lratchecker (0) { LOG ("PROOF new"); }
 
 Proof::~Proof () { LOG ("PROOF delete"); }
@@ -262,7 +260,6 @@ void Proof::flush_clause (Clause * c) {
 // have to remove exactly one literal.  Again the following function allows
 // to avoid copying the clause and instead provides tracing of the required
 // 'add' and 'remove' operations.
-// TODO: proof_chain...
 
 void Proof::strengthen_clause (Clause * c, int remove) {
   LOG (c, "PROOF strengthen by removing %d in", remove);
@@ -318,22 +315,12 @@ void Proof::add_original_clause () {
 void Proof::add_derived_clause () {
   LOG (clause, "PROOF adding derived external clause");
   assert (clause_id);
-  if (internal->opts.lrat) assert (!proof_chain.empty ());  // TODO: this is only for now
-  if (lratbuilder) {                                        // remove later
+  assert (!internal->opts.lrat || internal->opts.lratexternal || !proof_chain.empty ());
+  
+  if (lratbuilder) {
     if (proof_chain.empty ())
       proof_chain = lratbuilder->add_clause_get_proof (clause_id, clause);
-    else {
-      if (compare) {
-        vector<uint64_t> chain_too = lratbuilder->add_clause_get_proof (clause_id, clause);
-        LOG ("PROOF comparing lrat");
-        LOG (proof_chain,   "PROOF compare direct lrat: ");
-        LOG (chain_too, "PROOF compare lratbuilder: ");
-        // TODO: log
-        if (chain_too.size () < proof_chain.size ()) {
-          proof_chain = chain_too;                // always use shorter proof
-        }
-      } else lratbuilder->add_derived_clause (clause_id, clause);
-    }
+    else lratbuilder->add_derived_clause (clause_id, clause);
   }
   if (lratchecker) {
     if (proof_chain.empty ())

@@ -61,7 +61,7 @@ OPTION( covermaxeff,     1e8,  0,2e9,1,0,0,1, "maximum cover efficiency") \
 OPTION( coverminclslim,    2,  2,2e9,0,0,0,1, "minimum clause size") \
 OPTION( covermineff,     1e6,  0,2e9,1,0,0,1, "minimum cover efficiency") \
 OPTION( coverreleff,       4,  1,1e5,1,0,0,1, "relative efficiency per mille") \
-OPTION( decompose,         1,  0,  1,0,1,1,1, "decompose BIG in SCCs and ELS") \
+OPTION( decompose,         0,  0,  0,0,1,0,1, "decompose BIG in SCCs and ELS") \
 OPTION( decomposerounds,   2,  1, 16,1,0,0,1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1,0,1,0,1, "remove duplicated binaries") \
 OPTION( eagersubsume,      1,  0,  1,0,0,0,1, "subsume recently learned") \
@@ -105,10 +105,8 @@ OPTION( instantiateonce,   1,  0,  1,0,0,0,1, "instantiate each clause once") \
 LOGOPT( log,               0,  0,  1,0,0,0,0, "enable logging") \
 LOGOPT( logsort,           0,  0,  1,0,0,0,0, "sort logged clauses") \
 OPTION( lrat,              1,  1,  1,0,0,0,1, "use lrat proof format") \
-OPTION( lratdirect,        1,  1,  1,0,0,0,1, "direct lrat wherever possible") \
-OPTION( lratdirectcompare, 0,  0,  1,0,0,0,1, "compare direct lrat vs lratbuilder") \
-OPTION( lratfrat,          0,  0,  0,0,0,0,1, "use frat proof format") \
-OPTION( lratfratpartial,   0,  0,  1,0,0,0,1, "do not use lratbuilder") \
+OPTION( lratexternal,      0,  0,  1,0,0,0,1, "direct lrat wherever possible") \
+OPTION( lratfrat,          0,  0,  1,0,0,0,1, "use frat proof format") \
 OPTION( lucky,             1,  0,  1,0,0,0,1, "search for lucky phases") \
 OPTION( minimize,          1,  0,  1,0,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,0,1, "minimization depth") \

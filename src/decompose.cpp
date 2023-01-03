@@ -7,10 +7,12 @@ namespace CaDiCaL {
 // if clear is set the result is pushed to mini_chain instead and dfs
 // is cleared such that all seen literals will become roots as well
 //
-void Internal::decompose_analyze_lrat (DFS * dfs, int child, Clause * reason) {
-  if (!opts.lratdirect) return;
+void Internal::decompose_analyze_lrat (DFS * dfs, int child, Clause * reason, bool back) {
+  if (!opts.lrat || opts.lratexternal) return;
   assert (reason);            // not sure yet.
   LOG (reason, "decompose analyze child %d for", child);
+  if (back)
+    lrat_chain.push_back (reason->id);
   for (const auto lit : *reason) {
     if (lit == child) {
       assert (flags (lit).seen);
@@ -28,12 +30,13 @@ void Internal::decompose_analyze_lrat (DFS * dfs, int child, Clause * reason) {
       lrat_chain.push_back (id);
       continue;
     }
-    DFS & lit_dfs = dfs[vlit (lit)];
+    DFS & lit_dfs = dfs[vlit (other)];
     Clause * c = lit_dfs.parent;
     if (c)
-      decompose_analyze_lrat (dfs, other, c);
+      decompose_analyze_lrat (dfs, child, c, true);
   }
-  lrat_chain.push_back (reason->id);
+  if (!back)
+    lrat_chain.push_back (reason->id);
 }
 
 
@@ -138,11 +141,11 @@ bool Internal::decompose_round () {
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
-                  if (opts.lratdirect) {
+                  if (opts.lrat && !opts.lratexternal) {
                     Clause * reason = dfs[vlit (-parent)].parent;
-                    decompose_analyze_lrat (dfs, 0, reason);
+                    //decompose_analyze_lrat (dfs, 0, reason);
                     reason = dfs[vlit (parent)].parent;
-                    decompose_analyze_lrat (dfs, 0, reason);
+                    //decompose_analyze_lrat (dfs, 0, reason);
                     clear_analyzed_literals ();
                   }
                   assign_unit (parent);
@@ -204,7 +207,7 @@ bool Internal::decompose_round () {
               if (!active (child)) continue;
               DFS & child_dfs = dfs[vlit (child)];
               if (child_dfs.idx) continue;
-              if (opts.lratdirect) {
+              if (opts.lrat && !opts.lratexternal) {
                 child_dfs.parent = w.clause;
               }
               work.push_back (child);
@@ -276,9 +279,9 @@ bool Internal::decompose_round () {
           tmp = marked (other);
           if (tmp < 0) satisfied = true;
           else if (!tmp) {
-            if (opts.lratdirect) {
-              flags (-other).seen = true;
-              analyzed.push_back (-other);
+            if (opts.lrat && !opts.lratexternal) {
+              flags (other).seen = true;
+              analyzed.push_back (other);
             }
             mark (other);
             clause.push_back (other);
@@ -287,10 +290,10 @@ bool Internal::decompose_round () {
       }
     }
     if (!satisfied) {
-      decompose_analyze_lrat (dfs, 0, c);
+      decompose_analyze_lrat (dfs, 0, c, false);
       LOG (lrat_chain, "lrat_chain: ");
     }
-    if (opts.lratdirect) {
+    if (opts.lrat && !opts.lratexternal) {
       clear_analyzed_literals ();
     }
 
@@ -323,7 +326,7 @@ bool Internal::decompose_round () {
       assert (c->size > 2);
       if (!c->redundant) mark_removed (c);
       if (proof) {
-        if (opts.lratdirect)
+        if (opts.lrat && !opts.lratexternal)
           proof->add_derived_clause (++clause_id, clause, lrat_chain);
         else                                              
           proof->add_derived_clause (++clause_id, clause);                          

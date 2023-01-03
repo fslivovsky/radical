@@ -110,8 +110,6 @@ const char * Parser::parse_dimacs_non_profiled (int & vars, int strict) {
     // bad for fuzzing as is, should not overwrite manually set options
     if (*o) solver->set_long_option (o);
   }
-  // This is probably bad... and only necessary when i want lrat
-  solver->configure ("lratplain");
 
   if (ch != 'p') PER ("expected 'c' or 'p'");
 

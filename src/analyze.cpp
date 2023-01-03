@@ -19,7 +19,7 @@ void Internal::learn_empty_clause () {
   external->check_learned_empty_clause ();
   int64_t id = ++clause_id;
   if (proof) {
-    if (opts.lratdirect) {
+    if (opts.lrat && !opts.lratexternal) {
       LOG (lrat_chain, "learned empty clause with proof chain: ");
       proof->add_derived_empty_clause (id, lrat_chain);
     } else proof->add_derived_empty_clause (id);
@@ -36,7 +36,7 @@ void Internal::learn_unit_clause (int lit) {
   const unsigned uidx = vlit (lit);
   unit_clauses[uidx] = id;
   if (proof) {
-    if (opts.lratdirect) {
+    if (opts.lrat && !opts.lratexternal) {
       LOG (lrat_chain, "learned unit clause with proof chain: ");
       proof->add_derived_unit_clause (id, lit, lrat_chain);
     } else proof->add_derived_unit_clause (id, lit);
@@ -246,7 +246,7 @@ Internal::analyze_literal (int lit, int & open) {
   if (f.seen) return;
   Var & v = var (lit);
   if (!v.level) {
-    if (!opts.lratdirect) return;
+    if (!opts.lrat || opts.lratexternal) return;
     assert (val (lit) < 0);
     const unsigned uidx = vlit (-lit);
     uint64_t id = unit_clauses[uidx];
@@ -273,7 +273,7 @@ inline void
 Internal::analyze_reason (int lit, Clause * reason, int & open) {
   assert (reason);
   bump_clause (reason);
-  if (opts.lratdirect) lrat_chain.push_back (reason->id);
+  if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (reason->id);
   for (const auto & other : *reason)
     if (other != lit)
       analyze_literal (other, open);
@@ -800,7 +800,7 @@ void Internal::analyze () {
   // reverse lrat_chain. We could probably work with reversed iterators (views)
   // to be more efficient but we would have to distinguish in proof
   //
-  if (opts.lratdirect) {
+  if (opts.lrat && !opts.lratexternal) {
     std::reverse (lrat_chain.begin (), lrat_chain.end ());
   }
   

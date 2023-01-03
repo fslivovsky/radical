@@ -25,8 +25,6 @@ class Proof {
   vector<uint64_t> proof_chain;   // lrat style proof chain of clause
   uint64_t clause_id;            // id of added clause
 
-  bool compare;        // compare direct lrat vs lratbuilder
-
   // the 'observers'
   Checker * checker;                    // drat checker with unit propagation
   Tracer * tracer;                      // trace proof to file
@@ -45,7 +43,7 @@ class Proof {
 
 public:
 
-  Proof (Internal *, bool);
+  Proof (Internal *);
   ~Proof ();
 
   void connect (Tracer * t) { tracer = t; }

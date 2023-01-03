@@ -62,7 +62,6 @@ inline void Tracer::put_binary_id (uint64_t id) {
   file->put (ch);
 }
 
-// TODO: binary LRAT???
 
 /*------------------------------------------------------------------------*/
 

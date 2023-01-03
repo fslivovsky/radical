@@ -88,7 +88,7 @@ void Internal::mark_binary_literals (Eliminator & eliminator, int first) {
     const int tmp = marked (second);
     if (tmp < 0) {
       LOG ("found binary resolved unit %d", first);
-      if (opts.lratdirect) {
+      if (opts.lrat && !opts.lratexternal) {
         Clause * d = find_binary_clause (eliminator, first, -second);
         assert (d);
         for (auto & lit : *d) {
@@ -164,7 +164,7 @@ void Internal::find_equivalence (Eliminator & eliminator, int pivot) {
     const int tmp = marked (second);
     if (tmp > 0) {
       LOG ("found binary resolved unit %d", second);
-      if (opts.lratdirect) {
+      if (opts.lrat && !opts.lratexternal) {
         Clause * d = find_binary_clause (eliminator, pivot, second);
         assert (d);
         for (auto & lit : *d) {
