@@ -55,7 +55,9 @@ inline void Internal::inst_assign (int lit) {
   vals[lit] = 1;
   vals[-lit] = -1;
   trail.push_back (lit);
-  // TODO: for lrat mark lits as seen
+  if (!opts.lrat || opts.lratexternal) return;  
+  flags (lit).seen = true;
+  analyzed.push_back (lit);
 }
 
 // since we do not actually remember reasons we cannot do conflict analysis
@@ -127,14 +129,14 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
           } else if (!u) {
             assert (v < 0);
             if (opts.lrat && !opts.lratexternal) {
-              lrat_chain.push_back (w.clause->id);             // TODO for lrat: add potential units in w.clause
-            }                                                  // to lrat_chain and mark lits as seen
+              instantiate_unit_lrat (w.clause);
+            }
             inst_assign (other);
           } else {
             assert (u < 0);
             assert (v < 0);
             if (opts.lrat && !opts.lratexternal) {
-              lrat_chain.push_back (w.clause->id);  // TODO: same
+              instantiate_unit_lrat (w.clause);
             }
             LOG (w.clause, "conflict");
             ok = false;
@@ -153,6 +155,29 @@ bool Internal::inst_propagate () {      // Adapted from 'propagate'.
   stats.propagations.instantiate += delta;
   STOP (propagate);
   return ok;
+}
+
+/*------------------------------------------------------------------------*/
+
+// make sure lrat_chain contains all units
+//
+void Internal::instantiate_unit_lrat (Clause * reason) {
+  assert (opts.lrat && !opts.lratexternal);          // sanity check
+  if (!opts.lrat || opts.lratexternal) return;       // redundant
+  for (const auto & lit : *reason) {
+    signed char tmp = val (lit);
+    if (tmp >= 0) continue;
+    const auto other = -lit;
+    Flags & f = flags (other);
+    if (f.seen) continue;
+    f.seen = true;
+    analyzed.push_back (other);
+    const unsigned uidx = vlit (other);
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    lrat_chain.push_back (id);
+  }
+  lrat_chain.push_back (reason->id);
 }
 
 /*------------------------------------------------------------------------*/
@@ -182,6 +207,10 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   LOG (c, "trying to instantiate %d in", lit);
   assert (!c->garbage);
   c->instantiated = true;
+  assert (lrat_chain.empty ());
+  if (opts.lrat && !opts.lratexternal) {
+    instantiate_unit_lrat (c);
+  }
   level++;
   inst_assign (lit);                            // Assume 'lit' to true.
   for (const auto & other : *c) {
@@ -190,8 +219,6 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
     if (tmp) { assert (tmp < 0); continue; }
     inst_assign (-other);                       // Assume other to false.
   }
-  assert (lrat_chain.empty ());
-  if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (c->id);
   bool ok = inst_propagate ();                  // Propagate.
   while (trail.size () > before) {              // Backtrack.
     const int other = trail.back ();
@@ -203,7 +230,9 @@ bool Internal::instantiate_candidate (int lit, Clause * c) {
   propagated = before;
   assert (level == 1);
   level = 0;
-  // TODO: for lrat clear analyzed literals
+  if (opts.lrat && !opts.lratexternal) {
+    clear_analyzed_literals ();
+  }
   if (ok) {
     lrat_chain.clear ();
     LOG ("instantiation failed");

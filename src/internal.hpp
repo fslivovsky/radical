@@ -891,6 +891,7 @@ struct Internal {
     int elim_round(bool &completed);
     void elim(bool update_limits = true);
 
+    void instantiate_unit_lrat (Clause *);
     void inst_assign(int lit);
     bool inst_propagate();
     void collect_instantiation_candidates(Instantiator &);
@@ -919,6 +920,7 @@ struct Internal {
     void mark_duplicated_binary_clauses_as_garbage();
     int get_parent_reason_literal(int lit);
     void set_parent_reason_literal(int lit, int reason);
+    void probe_post_dominator_lrat (vector<Clause *>&, int, int);
     void probe_dominator_lrat (int dom, Clause * reason);
     int probe_dominator(int a, int b);
     int hyper_binary_resolve(Clause *);
