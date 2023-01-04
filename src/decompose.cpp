@@ -55,7 +55,6 @@ void Internal::decompose_conflicting_scc_lrat (DFS * dfs, vector<int> & scc) {
   if (!opts.lrat || opts.lratexternal) return;
   assert (lrat_chain.empty ());
   assert (mini_chain.empty ());
-  assert (analyzed.empty ());
   for (auto & lit : scc) {
     Flags & f = flags (lit);
     if (f.seen) return;
@@ -218,21 +217,31 @@ bool Internal::decompose_round () {
               if (opts.lrat && !opts.lratexternal) {
                 assert (analyzed.empty ());
                 int other, first = 0;
+                bool conflicting = false;
                 size_t j = scc.size ();
                 do {
                   assert (j > 0);
                   other = scc[--j];
                   if (!first || vlit (other) < vlit (first)) first = other;
                   Flags & f = flags (other);
+                  if (other == -parent) {
+                    conflicting = true;      // conflicting scc
+                  }
                   if (f.seen) {
-                    continue;                 // conflicting scc
+                    continue;                 // also conflicting scc
                   }
                   f.seen = true;
                   analyzed.push_back (other);
                 } while (other != parent);
                 
+                assert (!conflicting || first > 0);
                 vector<int> todo;
-                todo.push_back (first);
+                if (conflicting) {
+                  LOG ("conflicting scc simulating up at %d", parent);
+                  todo.push_back (parent);
+                }
+                else
+                  todo.push_back (first);
                 while (!todo.empty ()) {
                   const int next = todo.back ();
                   todo.pop_back ();
@@ -260,14 +269,16 @@ bool Internal::decompose_round () {
                 other = scc[--j];
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
-                  Flags & f = flags (parent);
-                  f.seen = true;
-                  analyzed.push_back (parent);
-                  decompose_analyze_binary_chain (dfs, - abs (parent));
-                  for (auto p : mini_chain)
-                    lrat_chain.push_back (p);
-                  mini_chain.clear ();
-                  assign_unit (- abs (parent));
+                  if (opts.lrat && !opts.lratexternal) {
+                    Flags & f = flags (parent);
+                    f.seen = true;
+                    analyzed.push_back (parent);
+                    decompose_analyze_binary_chain (dfs, -parent);
+                    for (auto p : mini_chain)
+                      lrat_chain.push_back (p);
+                    mini_chain.clear ();
+                  }
+                  assign_unit (-parent);
                   if (opts.lrat && !opts.lratexternal) {
                     bool ok = propagate ();
                     assert (!ok);
@@ -460,8 +471,8 @@ bool Internal::decompose_round () {
       garbage++;
     } else if (!clause.size ()) {
       LOG ("learned empty clause during decompose");
-      learn_empty_clause ();                             // again assign conflict...
-    } else if (clause.size () == 1) {                    // or change learn_empty_clause...
+      learn_empty_clause ();
+    } else if (clause.size () == 1) {
       LOG (c, "unit %d after substitution", clause[0]);
       assign_unit (clause[0]);
       mark_garbage (c);
