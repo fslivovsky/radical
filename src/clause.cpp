@@ -462,7 +462,7 @@ Clause * Internal::new_clause_as (const Clause * orig) {
   assert (!orig->redundant || !orig->keep || res->keep);
   if (proof) {
     if (opts.lrat && !opts.lratexternal) {
-      LOG (lrat_chain, "new clause as %" PRIu64 "with proof chain: ", orig->id);
+      LOG (lrat_chain, "new clause as %" PRIu64 " with proof chain: ", orig->id);
       proof->add_derived_clause (res, lrat_chain);
     }
     else
