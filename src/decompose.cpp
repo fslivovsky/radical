@@ -280,8 +280,9 @@ bool Internal::decompose_round () {
                   }
                   assign_unit (-parent);
                   if (opts.lrat && !opts.lratexternal) {
-                    bool ok = propagate ();
-                    assert (!ok);
+                    // bool ok = propagate ();                  // TODO differentiate between
+                    propagate ();                               // normal usage and logging/debugging
+                    // assert (!ok);                            // to avoid compiler warnings
                   }
                   learn_empty_clause ();
                   lrat_chain.clear ();
@@ -447,9 +448,10 @@ bool Internal::decompose_round () {
           mini_chain.push_back (p->id);
           Flags & f = flags (implied);
           if (f.seen) continue;
+          if (val (implied) < 0) continue;         // make sure we do skip over units
           f.seen = true;
           analyzed.push_back (implied);
-          if (val (implied) <= 0) continue;
+          if (val (implied) == 0) continue;
           const unsigned uidx = vlit (implied);
           uint64_t id = unit_clauses[uidx];
           assert (id);
