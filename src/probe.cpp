@@ -533,9 +533,9 @@ void Internal::failed_literal (int failed) {
 
   if (!probe_propagate ()) learn_empty_clause ();
 
-  while (!unsat && !work.empty ()) {
-    const int parent = work.back ();
-    work.pop_back ();
+  size_t j = 0;
+  while (!unsat && j < work.size ()) {
+    const int parent = work[j++];
     const signed char tmp = val (parent);
     if (tmp > 0) {
       get_probehbr_lrat (parent, uip);
@@ -550,6 +550,7 @@ void Internal::failed_literal (int failed) {
     }
     uip = parent;
   }
+  work.clear ();
   erase_vector (work);
   // clean_probehbr_lrat (); done later...
 
