@@ -84,7 +84,12 @@ void Internal::set_probehbr_lrat (int lit) {
   if (!opts.lrat || opts.lratexternal || opts.probehbr) return;
   assert (lit);
   assert (lrat_chain.size ());
-  probehbr_chains[vlit (lit)] = lrat_chain;
+  if (probehbr_chains[vlit (lit)].empty ())
+    probehbr_chains[vlit (lit)] = lrat_chain;
+  else {
+    for (auto id : lrat_chain)
+      probehbr_chains[vlit (lit)].push_back (id);
+  }
   lrat_chain.clear ();
 }
 
