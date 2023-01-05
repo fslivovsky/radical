@@ -211,17 +211,12 @@ void Internal::failing () {
       clear_analyzed_literals ();
     } else if (!unsat_constraint) {              // lrat for case (3)
       assert (clause.size () == 1);
-      // current clause and current analyze is -first_failed from above
-      // to get lrat we need to analyze -first_failed.reason
       const int lit = clause[0];
       Var & v = var (lit);
       assert (v.reason);
       assume_analyze_reason (lit, v.reason);
       clear_analyzed_literals ();
     } else {                                     // lrat for unsat_constraint
-      // TODO: init constraint_chains, for each constraint analyze and fill
-      // constraint_chains with assume_analyze_reason 
-      // cannot leave this empty...
       assert (clause.empty ());
       clear_analyzed_literals ();
       const size_t size = 2*(1 + (size_t) max_var);
@@ -232,30 +227,14 @@ void Internal::failing () {
       }
       for (auto lit : constraint) {
         assert (lit != INT_MIN);
-        for (auto ign : clause) {
-          Flags & f = flags (ign);
-          if (f.seen) continue;
-          f.seen = true;
+        for (auto ign : clause) {        // make sure nothing gets marked failed twice
+          Flags & f = flags (ign);       // also might shortcut the case where
+          if (f.seen) continue;          // lrat_chain is empty because clause
+          f.seen = true;                 // is tautological
           analyzed.push_back (ign);
         }
-        /*
-        Var & v = var (lit);
-        if (!v.level) {
-          uint64_t id = unit_clauses[vlit (-lit)];
-          assert (id);
-          constraint_chains[vlit (lit)].push_back (id);
-          continue;
-        }
-        flags (lit).seen = true;
-        analyzed.push_back (lit);
-        assert (v.reason);
-        assert (lrat_chain.empty ());
-        assume_analyze_reason (lit, v.reason);
-        */
         assume_analyze_literal (lit);
         assert (constraint_chains[vlit (lit)].empty ());
-        //assert (lrat_chain.size ());  again this should only happen if 
-        // clause contains -lit
         clear_analyzed_literals ();
         for (auto p : lrat_chain) {
           constraint_chains[vlit (lit)].push_back (p);
@@ -279,8 +258,6 @@ void Internal::failing () {
     //
     if (!unsat_constraint) {
       external->check_learned_clause ();
-      // TODO: lrat
-      // TODO: need depth first search for analyze in order to get correct proof chains
       if (proof) {
         if (opts.lrat && !opts.lratexternal) {
           LOG (lrat_chain, "assume proof chain without constraint");
@@ -294,12 +271,10 @@ void Internal::failing () {
       for (auto lit : constraint) {
         clause.push_back (-lit);
         external->check_learned_clause ();
-        // TODO: need depth first search for analyze in order to get correct proof chains
-        // Problem: we actually need to compute lrat_chain for every constraint lit
         if (proof) {
           if (opts.lrat && !opts.lratexternal) {
             if (constraint_chains[vlit (lit)].empty ()) {  // this should only happen when
-              clause.pop_back ();                          // lit and -lit are in clause
+              clause.pop_back ();                          // the clause is tautological
               continue;
             }
             for (auto p : constraint_chains[vlit (lit)]) {
