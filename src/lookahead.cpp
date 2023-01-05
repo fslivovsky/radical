@@ -333,6 +333,7 @@ int Internal::lookahead_probing() {
   set_mode (PROBE);
 
   MSG("unsat = %d, terminating_asked () = %d ", unsat, terminating_asked ());
+  init_probehbr_lrat ();
   while (!unsat &&
          !terminating_asked () &&
          (probe = lookahead_next_probe ())) {
@@ -343,6 +344,7 @@ int Internal::lookahead_probing() {
     if (probe_propagate ())
       hbrs = trail.size(), backtrack();
     else hbrs = 0, failed_literal (probe);
+    clean_probehbr_lrat ();
     if (max_hbrs < hbrs ||
         (max_hbrs == hbrs &&
          internal->bumped(probe) > internal->bumped(res))) {

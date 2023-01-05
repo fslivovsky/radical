@@ -165,7 +165,8 @@ struct Internal {
   vector<uint64_t> unit_clauses;// keep track of unit_clauses (lrat/frat)
   vector<uint64_t> lrat_chain;  // create lrat in solver: option lratdirect
   vector<uint64_t> mini_chain;  // used to create lrat in minimize
-  vector<uint64_t> minimize_chain; // used to create lrat in minimize 
+  vector<uint64_t> minimize_chain; // used to create lrat in minimize
+  vector<vector<uint64_t>> probehbr_chains; // only used if opts.probehbr=false
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char * vals;           // assignment [-max_var,max_var]
@@ -920,6 +921,10 @@ struct Internal {
     void mark_duplicated_binary_clauses_as_garbage();
     int get_parent_reason_literal(int lit);
     void set_parent_reason_literal(int lit, int reason);
+    void clean_probehbr_lrat ();
+    void init_probehbr_lrat ();
+    void get_probehbr_lrat (int lit, int uip);
+    void set_probehbr_lrat (int lit);
     void probe_post_dominator_lrat (vector<Clause *>&, int, int);
     void probe_dominator_lrat (int dom, Clause * reason);
     int probe_dominator(int a, int b);
