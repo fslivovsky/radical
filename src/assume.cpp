@@ -19,6 +19,52 @@ void Internal::assume (int lit) {
 }
 
 
+// for lrat we actually need to implement recursive dfs
+// I don't know how to do this non-recursively...
+// for non-lrat use bfs
+//
+void Internal::assume_analyze_literal (int lit) {
+  assert (lit);
+  Flags & f = flags (lit);
+  if (f.seen) return;
+  f.seen = true;
+  analyzed.push_back (lit);
+  Var & v = var (lit);
+  assert (val (lit) < 0);
+  if (!v.level) {
+    const unsigned uidx = vlit (-lit);
+    uint64_t id = unit_clauses[uidx];
+    assert (id);
+    lrat_chain.push_back (id);
+    return;
+  }
+  if (v.reason) {
+    assert (v.level);
+    LOG (v.reason, "analyze reason");
+    for (const auto & other : *v.reason) {
+      assume_analyze_literal (other);
+    }
+    lrat_chain.push_back (v.reason->id);
+    return;
+  }
+  assert (assumed (-lit));
+  LOG ("failed assumption %d", -lit);
+  clause.push_back (lit);
+  const unsigned bit = bign (-lit);
+  assert (!(f.failed & bit));
+  f.failed |= bit;
+}
+
+void Internal::assume_analyze_reason (int lit, Clause * reason) {
+  assert (reason);
+  assert (lrat_chain.empty ());
+  assert (opts.lrat && !opts.lratexternal);
+  for (const auto & other : *reason)
+    if (other != lit)
+      assume_analyze_literal (other);
+  lrat_chain.push_back (reason->id);
+}
+
 
 // Find all failing assumptions starting from the one on the assumption
 // stack with the lowest decision level.  This goes back to MiniSAT and is
@@ -34,8 +80,6 @@ void Internal::failing () {
   assert (clause.empty ());
   assert (lrat_chain.empty ());
   
-  // TODO: if lrat is enabled actually implement dfs search
-
   if (!unsat_constraint) {
     // Search for failing assumptions in the (internal) assumption stack.
 
@@ -133,83 +177,52 @@ void Internal::failing () {
 
   {
 
-    size_t next = 0;
+    // used for unsat_constraint lrat
+    vector<vector<uint64_t>> constraint_chains;
 
-    while (next < analyzed.size ()) {
-      const int lit = analyzed[next++];
-      assert (val (lit) > 0);
-      Var & v = var (lit);
-      if (!v.level) continue;
-      if (v.reason) {
-        assert (v.level);
-        LOG (v.reason, "analyze reason");
-        for (const auto & other : *v.reason) {
-          Flags & f = flags (other);
-          if (f.seen) continue;
-          f.seen = true;
-          assert (val (other) < 0);
-          analyzed.push_back (-other);
-        }
-      } else {
-        assert (assumed (lit));
-        LOG ("failed assumption %d", lit);
-        clause.push_back (-lit);
-        Flags & f = flags (lit);
-        const unsigned bit = bign (lit);
-        assert (!(f.failed & bit));
-        f.failed |= bit;
-      }
-    }
-    clear_analyzed_literals ();
-
-    // second round with dfs (only for lrat)
-    // TODO: what about unsat_constraint?
-    // This doesn't work at all :/
-    //
-    /*
-    if (opts.lrat && !opts.lratexternal) {
-      assert (lrat_chain.empty ());
-      vector<int> work;
-      for (auto lit : clause) {
-        work.push_back (val (lit) * lit);
-        Flags & f = flags (lit);
-        f.seen = true;
-        analyzed.push_back (lit);
-      }
-  
-      while (!work.empty ()) {
-        int lit = work.back ();
-        work.pop_back ();
+    // no lrat do bfs as it was before
+    if (unsat_constraint || !opts.lrat || opts.lratexternal) {
+      size_t next = 0;
+      while (next < analyzed.size ()) {
+        const int lit = analyzed[next++];
         assert (val (lit) > 0);
         Var & v = var (lit);
-        if (!v.level) {
-          if (!opts.lrat || opts.lratexternal) continue;
-          const unsigned uidx = vlit (lit);
-          uint64_t id = unit_clauses[uidx];
-          assert (id);
-          lrat_chain.push_back (id);
-          continue;
-        }
-  
+        if (!v.level) continue;
         if (v.reason) {
           assert (v.level);
-          LOG (v.reason, "analyze reason for lrat");
+          LOG (v.reason, "analyze reason");
           for (const auto & other : *v.reason) {
             Flags & f = flags (other);
             if (f.seen) continue;
             f.seen = true;
             assert (val (other) < 0);
             analyzed.push_back (-other);
-            work.push_back (-other);
-            if (opts.lrat && !opts.lratexternal) {
-              lrat_chain.push_back (v.reason->id);
-            }
           }
+        } else {
+          assert (assumed (lit));
+          LOG ("failed assumption %d", lit);
+          clause.push_back (-lit);
+          Flags & f = flags (lit);
+          const unsigned bit = bign (lit);
+          assert (!(f.failed & bit));
+          f.failed |= bit;
         }
       }
-      reverse (lrat_chain.begin (), lrat_chain.end ());
+      clear_analyzed_literals ();
+    } else if (!unsat_constraint) {              // lrat for case (3)
+      assert (clause.size () == 1);
+      // current clause and current analyze is -first_failed from above
+      // to get lrat we need to analyze -first_failed.reason
+      const int lit = clause[0];
+      Var & v = var (lit);
+      assert (v.reason);
+      assume_analyze_reason (lit, v.reason);
+      clear_analyzed_literals ();
+    } else {                                     // lrat for unsat_constraint
+      // TODO: init constraint_chains, for each constraint analyze and fill
+      // constraint_chains with assume_analyze_reason 
+      // cannot leave this empty...
     }
-    */
 
     // TODO: We can not do clause minimization here, right?
 
@@ -227,7 +240,6 @@ void Internal::failing () {
       external->check_learned_clause ();
       // TODO: lrat
       // TODO: need depth first search for analyze in order to get correct proof chains
-      /*
       if (proof) {
         if (opts.lrat && !opts.lratexternal) {
           LOG (lrat_chain, "assume proof chain without constraint");
@@ -237,7 +249,6 @@ void Internal::failing () {
           proof->add_derived_clause (++clause_id, clause);
         proof->delete_clause (clause_id, clause);
       }
-      */
     } else {
       for (auto lit : constraint) {
         clause.push_back (-lit);
