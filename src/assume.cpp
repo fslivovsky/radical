@@ -181,7 +181,7 @@ void Internal::failing () {
     vector<vector<uint64_t>> constraint_chains;
 
     // no lrat do bfs as it was before
-    if (unsat_constraint || !opts.lrat || opts.lratexternal) {
+    if (!opts.lrat || opts.lratexternal) {
       size_t next = 0;
       while (next < analyzed.size ()) {
         const int lit = analyzed[next++];
@@ -222,6 +222,47 @@ void Internal::failing () {
       // TODO: init constraint_chains, for each constraint analyze and fill
       // constraint_chains with assume_analyze_reason 
       // cannot leave this empty...
+      assert (clause.empty ());
+      clear_analyzed_literals ();
+      const size_t size = 2*(1 + (size_t) max_var);
+      constraint_chains.resize (size);
+      for (size_t i = 0; i > size; i++) {
+        vector<uint64_t> empty;
+        constraint_chains[i] = empty;
+      }
+      for (auto lit : constraint) {
+        assert (lit != INT_MIN);
+        for (auto ign : clause) {
+          Flags & f = flags (ign);
+          if (f.seen) continue;
+          f.seen = true;
+          analyzed.push_back (ign);
+        }
+        /*
+        Var & v = var (lit);
+        if (!v.level) {
+          uint64_t id = unit_clauses[vlit (-lit)];
+          assert (id);
+          constraint_chains[vlit (lit)].push_back (id);
+          continue;
+        }
+        flags (lit).seen = true;
+        analyzed.push_back (lit);
+        assert (v.reason);
+        assert (lrat_chain.empty ());
+        assume_analyze_reason (lit, v.reason);
+        */
+        assume_analyze_literal (lit);
+        assert (constraint_chains[vlit (lit)].empty ());
+        //assert (lrat_chain.size ());  again this should only happen if 
+        // clause contains -lit
+        clear_analyzed_literals ();
+        for (auto p : lrat_chain) {
+          constraint_chains[vlit (lit)].push_back (p);
+        }
+        lrat_chain.clear ();
+      }
+
     }
 
     // TODO: We can not do clause minimization here, right?
@@ -255,17 +296,23 @@ void Internal::failing () {
         external->check_learned_clause ();
         // TODO: need depth first search for analyze in order to get correct proof chains
         // Problem: we actually need to compute lrat_chain for every constraint lit
-        /*
         if (proof) {
           if (opts.lrat && !opts.lratexternal) {
+            if (constraint_chains[vlit (lit)].empty ()) {  // this should only happen when
+              clause.pop_back ();                          // lit and -lit are in clause
+              continue;
+            }
+            for (auto p : constraint_chains[vlit (lit)]) {
+              lrat_chain.push_back (p);
+            }
             LOG (lrat_chain, "assume proof chain with constraints");
             proof->add_derived_clause (++clause_id, clause, lrat_chain);
+            lrat_chain.clear ();
           }
           else
             proof->add_derived_clause (++clause_id, clause);
           proof->delete_clause (clause_id, clause);
         }
-        */
         clause.pop_back ();
       }
     }
