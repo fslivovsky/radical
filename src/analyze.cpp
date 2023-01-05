@@ -246,13 +246,11 @@ Internal::analyze_literal (int lit, int & open) {
   if (f.seen) return;
   Var & v = var (lit);
   if (!v.level) {                 // TODO: why do we not set f.seen for units?
-    if (!opts.lrat || opts.lratexternal) return;
-    f.seen = true;
-    analyzed.push_back (lit);
-    assert (val (lit) < 0);
-    const unsigned uidx = vlit (-lit);
-    uint64_t id = unit_clauses[uidx];
-    assert (id);
+    if (!opts.lrat || opts.lratexternal) return;   // okay, I know (partially)
+    assert (val (lit) < 0);                        // flags do not differentiate
+    const unsigned uidx = vlit (-lit);             // between +-lit and lit
+    uint64_t id = unit_clauses[uidx];              // needs to be analyzed (or was
+    assert (id);                                   // already in some cases idk exactly)
     lrat_chain.push_back (id);
     return;
   }
