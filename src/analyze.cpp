@@ -245,8 +245,10 @@ Internal::analyze_literal (int lit, int & open) {
   Flags & f = flags (lit);
   if (f.seen) return;
   Var & v = var (lit);
-  if (!v.level) {
+  if (!v.level) {                 // TODO: why do we not set f.seen for units?
     if (!opts.lrat || opts.lratexternal) return;
+    f.seen = true;
+    analyzed.push_back (lit);
     assert (val (lit) < 0);
     const unsigned uidx = vlit (-lit);
     uint64_t id = unit_clauses[uidx];
