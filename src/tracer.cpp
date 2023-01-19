@@ -232,6 +232,9 @@ void Tracer::finalize_clause (uint64_t id, const vector<int> & clause) {
   if (frat) frat_finalize_clause (id, clause);
 }
 
+void Tracer::set_first_id (uint64_t id) {
+  latest_id = id;
+}
 
 /*------------------------------------------------------------------------*/
 

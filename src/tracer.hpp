@@ -49,7 +49,8 @@ public:
   void delete_clause (uint64_t, const vector<int> &);
   void add_original_clause (uint64_t, const vector<int> &);       // for frat
   void finalize_clause (uint64_t, const vector<int> &);           // for frat
-
+  void set_first_id (uint64_t);
+  
   bool closed ();
   void close ();
   void flush ();

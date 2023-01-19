@@ -197,6 +197,7 @@ void Internal::reserve_ids (int number) {
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;
+  if (tracer) tracer->set_first_id (reserved_ids);
 }
 
 

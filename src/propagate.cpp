@@ -47,6 +47,9 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
 
 // calculate lrat_chain
 // inlined because mostly called inside of propagate hjm TODO :/
+// TODO: not inlined because its used in vivify. Bad??
+// also TODO: to avoid if branch in propagate use this in learn unit clause
+// need to rember reason clause for that
 //
 void Internal::build_chain_for_units (int lit, Clause * reason) {
   if (!opts.lrat || opts.lratexternal) return;
