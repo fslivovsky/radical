@@ -238,7 +238,7 @@ bool Internal::decompose_round () {
                 vector<int> todo;
                 if (conflicting) {
                   LOG ("conflicting scc simulating up at %d", parent);
-                  todo.push_back (parent);
+                  todo.push_back (-parent);
                 }
                 else
                   todo.push_back (first);
@@ -270,15 +270,15 @@ bool Internal::decompose_round () {
                 if (other == -parent) {
                   LOG ("both %d and %d in one SCC", parent, -parent);
                   if (opts.lrat && !opts.lratexternal) {
-                    Flags & f = flags (parent);
+                    Flags & f = flags (-parent);
                     f.seen = true;
-                    analyzed.push_back (parent);
-                    decompose_analyze_binary_chain (dfs, -parent);
+                    analyzed.push_back (-parent);
+                    decompose_analyze_binary_chain (dfs, parent);
                     for (auto p : mini_chain)
                       lrat_chain.push_back (p);
                     mini_chain.clear ();
                   }
-                  assign_unit (-parent);
+                  assign_unit (parent);
                   if (opts.lrat && !opts.lratexternal) {
                     // bool ok = propagate ();                  // TODO differentiate between
                     propagate ();                               // normal usage and logging/debugging
