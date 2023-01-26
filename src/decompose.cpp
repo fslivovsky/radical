@@ -79,9 +79,7 @@ void Internal::decompose_conflicting_scc_lrat (DFS * dfs, vector<int> & scc) {
   clear_analyzed_literals ();
 }
 
-// compute lrat_chain from a given starting literal to root
-// if clear is set the result is pushed to mini_chain instead and dfs
-// is cleared such that all seen literals will become roots as well
+// compute lrat_chain from a given starting reason to root
 //
 void Internal::decompose_analyze_lrat (DFS * dfs, Clause * reason) {
   if (!opts.lrat || opts.lratexternal) return;

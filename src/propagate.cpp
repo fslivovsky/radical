@@ -53,7 +53,7 @@ inline int Internal::assignment_level (int lit, Clause * reason) {
 //
 void Internal::build_chain_for_units (int lit, Clause * reason) {
   if (!opts.lrat || opts.lratexternal) return;
-  LOG ("building chain for units");
+  // LOG ("building chain for units");        bad line for debugging equivalence
   if (opts.chrono && assignment_level (lit, reason)) return;
   else if (!opts.chrono && level) return;   // not decision level 0
   assert (lrat_chain.empty ());

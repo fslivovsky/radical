@@ -194,6 +194,7 @@ void Internal::add_original_lit (int lit) {
 /*------------------------------------------------------------------------*/
 
 void Internal::reserve_ids (int number) {
+  //return;
   assert (number >= 0);
   assert (!clause_id && !reserved_ids && !original_id);
   clause_id = reserved_ids = number;

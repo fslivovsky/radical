@@ -94,36 +94,6 @@ void Internal::set_probehbr_lrat (int lit) {
 }
 
 
-// not needed anymore...
-//
-void Internal::probe_post_dominator_lrat (vector<Clause *> & reasons, int parent, int uip) {
-  if (!opts.lrat || opts.lratexternal) return;
-  assert (!opts.probehbr);                   // trying to find out if this is always the case
-
-  Clause * reason = reasons[vlit (uip)];
-  if (!reason) return;
-  LOG (reason, "probe post dominator lrat for %d from", parent);
-
-  for (const auto lit : *reason) {
-    const auto other = -lit;
-    if (other == parent) continue;
-    Flags & f = flags (other);
-    if (f.seen) continue;
-    f.seen = true;
-    analyzed.push_back (other);
-    const signed char tmp = val (lit);
-    if (tmp < 0) {
-      const unsigned uidx = vlit (other);
-      uint64_t id = unit_clauses[uidx];
-      assert (id);
-      lrat_chain.push_back (id);
-      continue;
-    }
-    probe_post_dominator_lrat (reasons, parent, uip);
-  }
-  lrat_chain.push_back (reason->id);
-}
-
 // compute lrat_chain for the part of the tree from lit to dom
 // use mini_chain because it needs to be reversed
 //
