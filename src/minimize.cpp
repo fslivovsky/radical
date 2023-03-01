@@ -111,11 +111,13 @@ void Internal::calculate_minimize_chain (int lit) {
   if (f.keep || f.added) return;
   f.added = true;
   if (!v.level) {
-    minimized.push_back (lit);                     // actually got a bug because
+    if (f.seen) return;
+    f.seen = true;
+    analyzed.push_back (lit);
     const unsigned uidx = vlit (lit);              // I didn't clean added flag
     uint64_t id = unit_clauses[uidx];
     assert (id);
-    mini_chain.push_back (id);
+    unit_chain.push_back (id);
     return;
   }
   assert (v.reason && f.removable);

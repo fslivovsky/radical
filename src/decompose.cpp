@@ -441,11 +441,11 @@ bool Internal::decompose_round () {
         for (auto p : dfs_chains[vlit (other)]) {
           int implied = p->literals[0];
           implied = implied == other ? -p->literals[1] : -implied;
-          LOG ("ADDED %d -> %d", other, implied);
-          other = implied;
+          LOG ("ADDED %d -> %d with id %" PRIu64 , other, implied, p->id);
           mini_chain.push_back (p->id);
+          other = implied;
           Flags & f = flags (implied);
-          if (f.seen) continue;
+          if (f.seen) continue;                    // TODO: need to do smth different then flags :/
           if (val (implied) < 0) continue;         // make sure we do skip over units
           f.seen = true;
           analyzed.push_back (implied);

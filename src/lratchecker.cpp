@@ -36,6 +36,7 @@ LratCheckerClause * LratChecker::new_clause () {
   res->hash = last_hash;
   res->id = last_id;
   res->size = size;
+  res->used = false;
   int * literals = res->literals, * p = literals;
   for (const auto & lit : imported_clause)
     *p++ = lit;
@@ -220,12 +221,19 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     }
   }
   
+  vector<LratCheckerClause*> used_clauses;
+  bool checking = false;
   for (auto &id : proof_chain) {
     LratCheckerClause * c = * find (id);
     if (!c) {
       LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %" PRIu64, id);
-      return false;
+      break;
     }
+    used_clauses.push_back (c);
+    if (c->used) {
+      LOG ("LRAT CHECKER LRAT failed. id %" PRIu64 " was used multiple times", id);
+      break;      
+    } else c->used = true;
     int unit = 0;
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
@@ -244,7 +252,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     }
     if (unit == INT_MIN) {
       LOG ("LRAT CHECKER check failed, found non unit clause %" PRIu64, id);
-      return false;
+      break;
     }
     if (!unit) {
       LOG ("LRAT CHECKER check succeded, clause falsified %" PRIu64, id);  // TODO:
@@ -255,12 +263,17 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
                                              // fails when we prove the
                                              // inconsistent clause to justify
                                              // whatever
-      return true;
+      checking = true;
+      break;
     }
     LOG ("LRAT CHECKER found unit clause %" PRIu64 ", assign %d", id, unit);
     checked_lit (unit) = true;
   }
-  return false;         // check failed because no empty clause was found
+  for (auto & lc : used_clauses) {
+    lc->used = false;
+  }
+  if (!checking) return false;   // check failed because no empty clause was found
+  return true;
 }
 
 /*------------------------------------------------------------------------*/

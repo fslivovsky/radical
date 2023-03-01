@@ -244,14 +244,16 @@ Internal::analyze_literal (int lit, int & open) {
   assert (lit);
   Flags & f = flags (lit);
   if (f.seen) return;
+  f.seen = true;
+  analyzed.push_back (lit);
   Var & v = var (lit);
-  if (!v.level) {                 // TODO: why do we not set f.seen for units?
-    if (!opts.lrat || opts.lratexternal) return;   // okay, I know (partially)
-    assert (val (lit) < 0);                        // flags do not differentiate
-    const unsigned uidx = vlit (-lit);             // between +-lit and lit
-    uint64_t id = unit_clauses[uidx];              // needs to be analyzed (or was
-    assert (id);                                   // already in some cases idk exactly)
-    lrat_chain.push_back (id);
+  if (!v.level) {                 // TODO: why do 
+    if (!opts.lrat || opts.lratexternal) return;  
+    assert (val (lit) < 0);                       
+    const unsigned uidx = vlit (-lit);            
+    uint64_t id = unit_clauses[uidx];             
+    assert (id);                                  
+    unit_chain.push_back (id);
     return;
   }
   assert (val (lit) < 0);
@@ -263,8 +265,6 @@ Internal::analyze_literal (int lit, int & open) {
     levels.push_back (v.level);
   }
   if (v.trail < l.seen.trail) l.seen.trail = v.trail;
-  f.seen = true;
-  analyzed.push_back (lit);
   LOG ("analyzed literal %d assigned at level %d", lit, v.level);
   if (v.level == level) open++;
 }
@@ -636,6 +636,7 @@ void Internal::analyze () {
 
   assert (conflict);
   assert (lrat_chain.empty ());
+  assert (unit_chain.empty ());
 
   // First update moving averages of trail height at conflict.
   //
@@ -801,6 +802,8 @@ void Internal::analyze () {
   // to be more efficient but we would have to distinguish in proof
   //
   if (opts.lrat && !opts.lratexternal) {
+    for (auto id : unit_chain) lrat_chain.push_back (id);
+    unit_chain.clear ();
     std::reverse (lrat_chain.begin (), lrat_chain.end ());
   }
   

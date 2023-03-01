@@ -166,6 +166,7 @@ struct Internal {
   vector<uint64_t> lrat_chain;  // create lrat in solver: option lratdirect
   vector<uint64_t> mini_chain;  // used to create lrat in minimize
   vector<uint64_t> minimize_chain; // used to create lrat in minimize
+  vector<uint64_t> unit_chain;  // used to avoid duplicate units
   vector<vector<uint64_t>> probehbr_chains; // only used if opts.probehbr=false
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases

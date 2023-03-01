@@ -21,6 +21,7 @@ struct LratCheckerClause {
   uint64_t id;                   // id of clause
   bool garbage;                 // for garbage clauses
   unsigned size;
+  bool used;
   int literals[0];              // 'literals' of length 'size'
 };
 
