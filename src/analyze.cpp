@@ -802,6 +802,7 @@ void Internal::analyze () {
   // to be more efficient but we would have to distinguish in proof
   //
   if (opts.lrat && !opts.lratexternal) {
+    LOG (unit_chain, "unit chain: ");
     for (auto id : unit_chain) lrat_chain.push_back (id);
     unit_chain.clear ();
     std::reverse (lrat_chain.begin (), lrat_chain.end ());

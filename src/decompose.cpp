@@ -428,9 +428,9 @@ bool Internal::decompose_round () {
         auto other = -lit;
         Flags & f = flags (other);
         if (f.seen) continue;
-        f.seen = true;
-        analyzed.push_back (other);
         if (val (other) > 0) {
+          f.seen = true;
+          analyzed.push_back (other);
           const unsigned uidx = vlit (other);
           uint64_t id = unit_clauses[uidx];
           assert (id);
@@ -442,10 +442,10 @@ bool Internal::decompose_round () {
           int implied = p->literals[0];
           implied = implied == other ? -p->literals[1] : -implied;
           LOG ("ADDED %d -> %d with id %" PRIu64 , other, implied, p->id);
-          mini_chain.push_back (p->id);
           other = implied;
+          mini_chain.push_back (p->id);
           Flags & f = flags (implied);
-          if (f.seen) continue;                    // TODO: need to do smth different then flags :/
+          if (f.seen) break;                    // TODO: need to do smth different then flags :/
           if (val (implied) < 0) continue;         // make sure we do skip over units
           f.seen = true;
           analyzed.push_back (implied);
@@ -459,6 +459,8 @@ bool Internal::decompose_round () {
         for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++)
           lrat_chain.push_back (*p);
         mini_chain.clear ();
+        f.seen = true;
+        analyzed.push_back (-lit);
       }
       clear_analyzed_literals ();
       lrat_chain.push_back (c->id);
