@@ -69,12 +69,13 @@ void Tracer::lrat_add_clause (uint64_t id, const vector<int> & clause, const vec
   LOG ("TRACER LRAT tracing addition of derived clause with proof chain");
 
   if (delete_ids.size ()) {
-    if (binary) put_binary_id (latest_id);
-    else file->put (latest_id), file->put (" ");
+    //if (binary) put_binary_id (latest_id);
+    //if (binary) file->put ('d');
+    if (!binary) file->put (latest_id), file->put (" ");
     if (binary) file->put ('d');
     else file->put ("d ");
     for (auto & did : delete_ids) {
-      if (binary) put_binary_id (did);
+      if (binary) put_binary_id (2 * did);     // to have the output format as drat-trim
       else file->put (did), file->put (" ");
     }
     if (binary) put_binary_zero ();
@@ -83,7 +84,7 @@ void Tracer::lrat_add_clause (uint64_t id, const vector<int> & clause, const vec
   }
   latest_id = id;
   
-  if (binary) put_binary_id (id);
+  if (binary) file->put ('a'), put_binary_id (id);
   else file->put (id), file->put (" ");
   for (const auto & external_lit : clause)
     if (binary) put_binary_lit (external_lit);
