@@ -205,7 +205,7 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {
   if (file->closed ()) return;
   if (frat) frat_add_derived_clause (id, clause);
   else {
-    assert (!lrat);
+    assert (!lrat); // TODO: there is some wierd bug with wierd options...
     drat_add_clause (clause);
   }
   added++;
