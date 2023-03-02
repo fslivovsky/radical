@@ -13,6 +13,8 @@ struct Flags {        // Variable flags.
   bool removable  : 1;    // can be removed in 'minimize'
   bool shrinkable : 1; // can be removed in 'shrink'
   bool added      : 1; // has already been added to lrat_chain (in 'minimize')
+  bool ignorepos  : 1; // decompose need to dif between pos/neg lit
+  bool ignoreneg  : 1; // decompose
 
   // These three variable flags are used to schedule clauses in subsumption
   // ('subsume'), variables in bounded variable elimination ('elim') and in

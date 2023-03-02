@@ -422,12 +422,14 @@ bool Internal::decompose_round () {
         }
       }
     }
-    if (!satisfied) {
+    if (opts.lrat && !opts.lratexternal && !satisfied) {
       assert (lrat_chain.empty ());
       for (const auto lit : *c) {
         auto other = -lit;
         Flags & f = flags (other);
-        if (f.seen) continue;
+        // TODO: think about how to use ignorepos / ingoreneg
+        bool ignore = (abs (other) == other && f.ignorepos) || (abs (other) != other && f.ignoreneg);
+        if (ignore) continue;
         if (val (other) > 0) {
           f.seen = true;
           analyzed.push_back (other);
@@ -466,7 +468,6 @@ bool Internal::decompose_round () {
       lrat_chain.push_back (c->id);
       LOG (lrat_chain, "lrat_chain: ");
     }
-    if (opts.lrat && !opts.lratexternal) clear_analyzed_literals ();
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);
