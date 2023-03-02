@@ -241,13 +241,14 @@ inline void Internal::bump_clause (Clause * c) {
 
 inline void
 Internal::analyze_literal (int lit, int & open) {
+  LOG ("analyzing literal %d", lit);
   assert (lit);
   Flags & f = flags (lit);
   if (f.seen) return;
   f.seen = true;
   analyzed.push_back (lit);
   Var & v = var (lit);
-  if (!v.level) {                 // TODO: why do 
+  if (!v.level) {
     if (!opts.lrat || opts.lratexternal) return;  
     assert (val (lit) < 0);                       
     const unsigned uidx = vlit (-lit);            

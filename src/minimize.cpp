@@ -109,7 +109,6 @@ void Internal::calculate_minimize_chain (int lit) {
   Var & v = var (lit);
   assert (!v.level || f.removable || f.keep);
   if (f.keep || f.added) return;
-  f.added = true;
   if (!v.level) {
     if (f.seen) return;
     f.seen = true;
@@ -120,6 +119,7 @@ void Internal::calculate_minimize_chain (int lit) {
     unit_chain.push_back (id);
     return;
   }
+  f.added = true;
   assert (v.reason && f.removable);
   const const_literal_iterator end = v.reason->end ();
   const_literal_iterator i;
