@@ -2,10 +2,10 @@
 
 CaDiCaL Simplified Satisfiability Solver
 ===============================================================================
-Reimplement FRAT proofs
+## Reimplement FRAT proofs
 inspired by:
-https://github.com/digama0/cadical
-https://www.cs.cmu.edu/~mheule/publications/FRAT-TACAS.pdf
+* https://github.com/digama0/cadical
+* https://www.cs.cmu.edu/~mheule/publications/FRAT-TACAS.pdf
 
-!IMPORTANT!
-for a working version refer to commit b89a378a9a8027cf329db88bc7a69fce04daeb42
+## !IMPORTANT!
+* for a working version refer to commit b89a378a9a8027cf329db88bc7a69fce04daeb42
