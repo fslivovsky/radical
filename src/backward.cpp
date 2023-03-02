@@ -118,8 +118,10 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             else unit = lit;
           }
           if (opts.lrat && !opts.lratexternal) {
-            for (auto p : mini_chain) {
-              lrat_chain.push_back (p);
+            if (unit && unit != INT_MIN) {
+              for (auto p : mini_chain) {
+                lrat_chain.push_back (p);
+              }
             }
             lrat_chain.push_back (d->id);
             lrat_chain.push_back (c->id);
