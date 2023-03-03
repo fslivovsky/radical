@@ -422,17 +422,15 @@ bool Internal::decompose_round () {
         }
       }
     }
-    if (opts.lrat && !opts.lratexternal && !satisfied) {
+    if (!satisfied) {
       assert (lrat_chain.empty ());
       for (const auto lit : *c) {
         auto other = -lit;
         Flags & f = flags (other);
-        // TODO: think about how to use ignorepos / ingoreneg
-        bool ignore = (abs (other) == other && f.ignorepos) || (abs (other) != other && f.ignoreneg);
-        if (ignore) continue;
+        if (f.seen) continue;
+        f.seen = true;
+        analyzed.push_back (other);
         if (val (other) > 0) {
-          f.seen = true;
-          analyzed.push_back (other);
           const unsigned uidx = vlit (other);
           uint64_t id = unit_clauses[uidx];
           assert (id);
@@ -443,11 +441,11 @@ bool Internal::decompose_round () {
         for (auto p : dfs_chains[vlit (other)]) {
           int implied = p->literals[0];
           implied = implied == other ? -p->literals[1] : -implied;
-          LOG ("ADDED %d -> %d with id %" PRIu64 , other, implied, p->id);
+          LOG ("ADDED %d -> %d", other, implied);
           other = implied;
           mini_chain.push_back (p->id);
           Flags & f = flags (implied);
-          if (f.seen) break;                    // TODO: need to do smth different then flags :/
+          if (f.seen) continue;
           if (val (implied) < 0) continue;         // make sure we do skip over units
           f.seen = true;
           analyzed.push_back (implied);
@@ -461,13 +459,12 @@ bool Internal::decompose_round () {
         for (auto p = mini_chain.rbegin (); p != mini_chain.rend (); p++)
           lrat_chain.push_back (*p);
         mini_chain.clear ();
-        f.seen = true;
-        analyzed.push_back (-lit);
       }
       clear_analyzed_literals ();
       lrat_chain.push_back (c->id);
       LOG (lrat_chain, "lrat_chain: ");
     }
+    if (opts.lrat && !opts.lratexternal) clear_analyzed_literals ();
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);
