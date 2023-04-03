@@ -268,6 +268,10 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) {
       if (!opts.lrat || opts.lratexternal) continue;
+      Flags & f = flags (lit);
+      if (f.seen) continue;       
+      analyzed.push_back (lit);   
+      f.seen = true;              
       const unsigned uidx = vlit (-lit);
       uint64_t id = unit_clauses[uidx];
       assert (id);
@@ -281,6 +285,8 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     elim_update_removed_clause (eliminator, c, satisfied);
     mark_garbage (c);
     clause.clear ();
+    lrat_chain.clear ();
+    clear_analyzed_literals ();
     unmark (c);
     return false;
   }
@@ -296,6 +302,10 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     if (tmp > 0) { satisfied = lit; break; }
     else if (tmp < 0) {
       if (!opts.lrat || opts.lratexternal) continue;
+      Flags & f = flags (lit);
+      if (f.seen) continue;       
+      analyzed.push_back (lit);   
+      f.seen = true;              
       const unsigned uidx = vlit (-lit);
       uint64_t id = unit_clauses[uidx];
       assert (id);
@@ -307,6 +317,7 @@ bool Internal::resolve_clauses (Eliminator & eliminator,
     else assert (tmp > 0), t++;
   }
 
+  clear_analyzed_literals ();
   unmark (c);
   const int64_t size = clause.size ();
   

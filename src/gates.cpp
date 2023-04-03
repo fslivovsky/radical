@@ -107,6 +107,8 @@ void Internal::mark_binary_literals (Eliminator & eliminator, int first) {
     if (!second) continue;
     const int tmp = marked (second);
     if (tmp < 0) {
+      // had a bug where units could occur multiple times here
+      // solved with flags
       LOG ("found binary resolved unit %d", first);
       if (opts.lrat && !opts.lratexternal) {
         Clause * d = find_binary_clause (first, -second);
@@ -114,21 +116,34 @@ void Internal::mark_binary_literals (Eliminator & eliminator, int first) {
         for (auto & lit : *d) {
           if (lit == first || lit == -second) continue;
           assert (val (lit) < 0);
+          Flags & f = flags (lit);
+          if (f.seen) continue;       
+          analyzed.push_back (lit);   
+          f.seen = true;              
           const unsigned uidx = vlit (-lit);
           uint64_t id = unit_clauses[uidx];
           assert (id);
           lrat_chain.push_back (id);
+          //LOG ("gates added id %" PRId64, id);
         }
         for (auto & lit : *c) {
           if (lit == first || lit == second) continue;
           assert (val (lit) < 0);
+          Flags & f = flags (lit);
+          if (f.seen) continue;       
+          analyzed.push_back (lit);   
+          f.seen = true;              
           const unsigned uidx = vlit (-lit);
           uint64_t id = unit_clauses[uidx];
           assert (id);
           lrat_chain.push_back (id);
+          //LOG ("gates added id %" PRId64, id);
         }
         lrat_chain.push_back (c->id);
         lrat_chain.push_back (d->id);
+        //LOG ("gates added id %" PRId64, c->id);
+        //LOG ("gates added id %" PRId64, d->id);
+        clear_analyzed_literals ();
       }
       assign_unit (first);
       elim_propagate (eliminator, first);
@@ -184,27 +199,42 @@ void Internal::find_equivalence (Eliminator & eliminator, int pivot) {
     const int tmp = marked (second);
     if (tmp > 0) {
       LOG ("found binary resolved unit %d", second);
+      // did not find a bug where units could occur multiple times here
+      // still solved potential issues with flags
       if (opts.lrat && !opts.lratexternal) {
         Clause * d = find_binary_clause (pivot, second);
         assert (d);
         for (auto & lit : *d) {
           if (lit == pivot || lit == second) continue;
           assert (val (lit) < 0);
+          Flags & f = flags (lit);
+          if (f.seen) continue;       
+          analyzed.push_back (lit);   
+          f.seen = true;              
           const unsigned uidx = vlit (-lit);
           uint64_t id = unit_clauses[uidx];
           assert (id);
           lrat_chain.push_back (id);
+          //LOG ("gates added id %" PRId64, id);
         }
         for (auto & lit : *c) {
           if (lit == -pivot || lit == second) continue;
           assert (val (lit) < 0);
+          Flags & f = flags (lit);
+          if (f.seen) continue;       
+          analyzed.push_back (lit);   
+          f.seen = true;              
           const unsigned uidx = vlit (-lit);
           uint64_t id = unit_clauses[uidx];
           assert (id);
           lrat_chain.push_back (id);
+          //LOG ("gates added id %" PRId64, id);
         }
         lrat_chain.push_back (c->id);
         lrat_chain.push_back (d->id);
+        clear_analyzed_literals ();
+        //LOG ("gates added id %" PRId64, c->id);
+        //LOG ("gates added id %" PRId64, d->id);
       }
       assign_unit (second);
       elim_propagate (eliminator, second);
