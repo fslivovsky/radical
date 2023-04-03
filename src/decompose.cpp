@@ -79,6 +79,15 @@ void Internal::decompose_conflicting_scc_lrat (DFS * dfs, vector<int> & scc) {
   clear_analyzed_literals ();
 }
 
+void Internal::clear_decomposed_literals () {
+  LOG ("clearing %zd decomposed literals", decomposed.size ());
+  for (const auto & lit : decomposed) {
+    assert (marked_decompose (lit));
+    unmark_decompose (lit);
+  }
+  decomposed.clear ();
+}
+
 // compute lrat_chain from a given starting reason to root
 //
 void Internal::decompose_analyze_lrat (DFS * dfs, Clause * reason) {
@@ -424,13 +433,12 @@ bool Internal::decompose_round () {
     }
     if (!satisfied) {
       assert (lrat_chain.empty ());
+      assert (decomposed.empty ());
       for (const auto lit : *c) {
         auto other = -lit;
-        Flags & f = flags (other);
-        if (f.seen) continue;
-        f.seen = true;
-        analyzed.push_back (other);
         if (val (other) > 0) {
+          if (marked_decompose (other)) continue;
+          mark_decomposed (other);
           const unsigned uidx = vlit (other);
           uint64_t id = unit_clauses[uidx];
           assert (id);
@@ -439,17 +447,17 @@ bool Internal::decompose_round () {
         }
         assert (mini_chain.empty ());
         for (auto p : dfs_chains[vlit (other)]) {
+          if (marked_decompose (other)) continue;
+          mark_decomposed (other);
           int implied = p->literals[0];
           implied = implied == other ? -p->literals[1] : -implied;
           LOG ("ADDED %d -> %d", other, implied);
           other = implied;
           mini_chain.push_back (p->id);
-          Flags & f = flags (implied);
-          if (f.seen) continue;
-          if (val (implied) < 0) continue;         // make sure we do skip over units
-          f.seen = true;
-          analyzed.push_back (implied);
-          if (val (implied) == 0) continue;
+          if (val (implied) <= 0) continue;
+          if (marked_decompose (implied)) break;
+          mark_decomposed (implied);
+          // if (val (implied) == 0) continue;
           const unsigned uidx = vlit (implied);
           uint64_t id = unit_clauses[uidx];
           assert (id);
@@ -460,11 +468,14 @@ bool Internal::decompose_round () {
           lrat_chain.push_back (*p);
         mini_chain.clear ();
       }
-      clear_analyzed_literals ();
+      //clear_analyzed_literals ();
+      clear_decomposed_literals ();
       lrat_chain.push_back (c->id);
       LOG (lrat_chain, "lrat_chain: ");
     }
-    if (opts.lrat && !opts.lratexternal) clear_analyzed_literals ();
+    //if (opts.lrat && !opts.lratexternal) {
+    //  clear_analyzed_literals ();
+    //}
     if (satisfied) {
       LOG (c, "satisfied after substitution (postponed)");
       postponed_garbage.push_back (c);

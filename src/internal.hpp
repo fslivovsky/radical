@@ -206,6 +206,7 @@ struct Internal {
   vector<int> original;         // original added literals
   vector<int> levels;           // decision levels in learned clause
   vector<int> analyzed;         // analyzed literals in 'analyze'
+  vector<int> decomposed;       // literals skipped in 'decompose'
   vector<int> minimized;        // removable or poison in 'minimize'
   vector<int> shrinkable;       // removable or poison in 'shrink'
   Reap reap;                    // radix heap for shrink
@@ -811,11 +812,6 @@ struct Internal {
       const unsigned bit = bign(lit);
       return (f.block & bit) != 0;
     }
-    void unmark_block(int lit) {
-      Flags &f = flags(lit);
-      const unsigned bit = bign(lit);
-      f.block &= ~bit;
-    }
 
     // During scheduling literals for blocked clause elimination we skip those
     // literals which occur negated in a too large clause.
@@ -828,11 +824,38 @@ struct Internal {
       LOG("marking %d to be skipped as blocking literal", lit);
       f.skip |= bit;
     }
+    void unmark_block(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      f.block &= ~bit;
+    }
     bool marked_skip(int lit) {
       const Flags &f = flags(lit);
       const unsigned bit = bign(lit);
       return (f.skip & bit) != 0;
     }
+
+    // During decompose ignore literals where we already built lrat chains
+    //
+    void mark_decomposed(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      assert ((f.decompose & bit) == 0);
+      LOG("marking lrat chain of %d to be skipped", lit);
+      decomposed.push_back (lit);
+      f.decompose |= bit;
+    }
+    void unmark_decompose(int lit) {
+      Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      f.decompose &= ~bit;
+    }
+    bool marked_decompose(int lit) {
+      const Flags &f = flags(lit);
+      const unsigned bit = bign(lit);
+      return (f.decompose & bit) != 0;
+    }
+    void clear_decomposed_literals ();
 
     // Blocked Clause elimination in 'block.cpp'.
     //
