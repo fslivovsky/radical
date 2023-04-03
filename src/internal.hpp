@@ -948,7 +948,7 @@ struct Internal {
     void clean_probehbr_lrat ();
     void init_probehbr_lrat ();
     void get_probehbr_lrat (int lit, int uip);
-    void set_probehbr_lrat (int lit);
+    void set_probehbr_lrat (int lit, int uip);
     void probe_post_dominator_lrat (vector<Clause *>&, int, int);
     void probe_dominator_lrat (int dom, Clause * reason);
     int probe_dominator(int a, int b);

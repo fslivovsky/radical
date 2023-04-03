@@ -80,7 +80,7 @@ void Internal::get_probehbr_lrat (int lit, int uip) {
 // sets the corresponding probehbr_chain to what is currently stored in lrat_chain.
 // also clears lrat_chain.
 //
-void Internal::set_probehbr_lrat (int lit) {
+void Internal::set_probehbr_lrat (int lit, int uip) {
   if (!opts.lrat || opts.lratexternal || opts.probehbr) return;
   assert (lit);
   assert (lrat_chain.size ());
@@ -100,7 +100,6 @@ void Internal::set_probehbr_lrat (int lit) {
 void Internal::probe_dominator_lrat (int dom, Clause * reason) {
   if (!opts.lrat || opts.lratexternal || !dom) return;
   LOG (reason, "probe dominator lrat for %d from", dom);
-
   for (const auto lit : *reason) {
     if (val (lit) >= 0) continue;
     const auto other = -lit;
@@ -254,7 +253,7 @@ inline int Internal::hyper_binary_resolve (Clause * reason) {
     assert (!opts.probehbr);
     probe_dominator_lrat (dom, reason);
     clear_analyzed_literals ();
-    set_probehbr_lrat (dom);
+    set_probehbr_lrat (dom, lits[0]);
   }
   return dom;
 }
@@ -510,18 +509,21 @@ void Internal::failed_literal (int failed) {
 
   size_t j = 0;
   while (!unsat && j < work.size ()) {
+    // assert (!opts.probehbr);        assertion fails ...
     const int parent = work[j++];
     const signed char tmp = val (parent);
     if (tmp > 0) {
+      assert (!opts.probehbr);        // ... assertion should hold here
       get_probehbr_lrat (parent, uip);
       LOG ("clashing failed parent %d", parent);
       learn_empty_clause ();
     } else if (tmp == 0) {
+      assert (!opts.probehbr);        // ... and here              
       LOG ("found unassigned failed parent %d", parent);
-      get_probehbr_lrat (parent, uip);
-      probe_assign_unit (-parent);
-      lrat_chain.clear ();
-      if (!probe_propagate ()) learn_empty_clause ();
+      get_probehbr_lrat (parent, uip);                    // this is computed during 
+      probe_assign_unit (-parent);                        // propagation and can include
+      lrat_chain.clear ();                                // multiple chains where only one
+      if (!probe_propagate ()) learn_empty_clause ();     // is needed!
     }
     uip = parent;
   }
