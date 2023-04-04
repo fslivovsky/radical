@@ -48,8 +48,10 @@ inline void Internal::set_parent_reason_literal (int lit, int reason) {
 //
 void Internal::clean_probehbr_lrat () {
   if (!opts.lrat || opts.lratexternal || opts.probehbr) return;
-  for (auto & pc : probehbr_chains) {
-    pc.clear ();
+  for (auto & field : probehbr_chains) {
+    for (auto & chain : field) {
+      chain.clear ();
+    }
   }
 }
 
@@ -59,9 +61,15 @@ void Internal::init_probehbr_lrat () {
   if (!opts.lrat || opts.lratexternal || opts.probehbr) return;
   const size_t size = 2*(1 + (size_t) max_var);
   probehbr_chains.resize (size);
-  for (size_t i = 0; i > size; i++) {
-    vector<uint64_t> empty;
-    probehbr_chains[i] = empty;
+  for (size_t i = 0; i < size; i++) {
+    probehbr_chains[i].resize (size);
+    // commented because not needed... should be empty already
+    /*
+    for (size_t j = 0; j < size; j++) {
+      vector<uint64_t> empty;
+      probehbr_chains[i][j] = empty;
+    }
+    */
   }
 }
 
@@ -73,7 +81,7 @@ void Internal::get_probehbr_lrat (int lit, int uip) {
   assert (lit);
   assert (lrat_chain.empty ());
   assert (val (uip) < 0);
-  lrat_chain = probehbr_chains[vlit (lit)];
+  lrat_chain = probehbr_chains[vlit (lit)][vlit (uip)];
   lrat_chain.push_back (unit_clauses[vlit (-uip)]);
 }
 
@@ -84,12 +92,8 @@ void Internal::set_probehbr_lrat (int lit, int uip) {
   if (!opts.lrat || opts.lratexternal || opts.probehbr) return;
   assert (lit);
   assert (lrat_chain.size ());
-  if (probehbr_chains[vlit (lit)].empty ())
-    probehbr_chains[vlit (lit)] = lrat_chain;
-  else {
-    for (auto id : lrat_chain)
-      probehbr_chains[vlit (lit)].push_back (id);
-  }
+  assert (probehbr_chains[vlit (lit)][vlit (uip)].empty ());
+  probehbr_chains[vlit (lit)][vlit (uip)] = lrat_chain;
   lrat_chain.clear ();
 }
 
