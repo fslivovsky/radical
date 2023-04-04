@@ -220,6 +220,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       return true;
     }
   }
+  assert (proof_chain.size ());                // but we can assert it here :)
   
   vector<LratCheckerClause*> used_clauses;
   bool checking = false;
@@ -232,13 +233,15 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     used_clauses.push_back (c);
     if (c->used) {
       LOG ("LRAT CHECKER LRAT failed. id %" PRIu64 " was used multiple times", id);
-      break;            // ignore for now
+      break;                               // mostly fuzzed and debugged :)
     } else c->used = true;
     int unit = 0;
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
       if (checked_lit (-lit)) continue;
-      // assert (!checked_lit (lit));      // attempting to assert here since
+      // TODO uncomment and fuzz maybe also withouth opts.lratexternal
+      assert (!checked_lit (lit) || opts.lratexternal);
+      assert (!checked_lit (lit));         // attempting to assert here since
                                            // usually this should be a bug in
                                            // the proof chain but in some cases
                                            // this can occur (e.g. when we prove
@@ -255,8 +258,11 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       break;
     }
     if (!unit) {
-      LOG ("LRAT CHECKER check succeded, clause falsified %" PRIu64, id);  // TODO:
-      // assert (proof_chain.back () == id); // also attempting since this
+      LOG ("LRAT CHECKER check succeded, clause falsified %" PRIu64, id);
+      // TODO fuzz with this to see where errors are.
+      // known problems with lratbuilder? not interesting anymore...
+      assert (proof_chain.back () == id || opts.lratexternal);
+      assert (proof_chain.back () == id);    // also attempting since this
                                              // basically means the proof chain
                                              // is unnecessarily long.
                                              // but unfortunatly this also
