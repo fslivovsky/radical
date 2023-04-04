@@ -232,7 +232,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     used_clauses.push_back (c);
     if (c->used) {
       LOG ("LRAT CHECKER LRAT failed. id %" PRIu64 " was used multiple times", id);
-      // break;            // ignore for now
+      break;            // ignore for now
     } else c->used = true;
     int unit = 0;
     for (int * i = c->literals; i < c->literals + c->size; i++) {
