@@ -124,7 +124,7 @@ void Internal::transred () {
     size_t j = 0;                       // 'propagated' in BFS
 
     assert (lrat_chain.empty ());
-    if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (c->id);
+    // if (opts.lrat && !opts.lratexternal) lrat_chain.push_back (c->id);   // TODO is this really unnecessary
 
     while (!transitive && !failed && j < work.size ()) {
       const int lit = work[j++];
