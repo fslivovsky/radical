@@ -22,6 +22,7 @@ struct LratCheckerClause {
   bool garbage;                 // for garbage clauses
   unsigned size;
   bool used;
+  bool tautological;
   int literals[0];              // 'literals' of length 'size'
 };
 
@@ -81,7 +82,8 @@ class LratChecker {
   LratCheckerClause * new_clause ();
   void delete_clause (LratCheckerClause *);
 
-  bool check (vector<uint64_t>);    // check new clause is implied
+  bool check (vector<uint64_t>);    // check if new clause is implied by rup
+  bool check_resolution (vector<uint64_t>); // check if new clause is implied by resolution
 
   struct {
 

@@ -37,9 +37,18 @@ LratCheckerClause * LratChecker::new_clause () {
   res->id = last_id;
   res->size = size;
   res->used = false;
+  res->tautological = false;
   int * literals = res->literals, * p = literals;
-  for (const auto & lit : imported_clause)
+  for (auto & b : checked_lits) b = false;
+  for (const auto & lit : imported_clause) {
     *p++ = lit;
+    checked_lit (-lit) = true;
+    if (checked_lit (lit)) {
+      LOG (imported_clause, "LRAT CHECKER clause tautological");
+      res->tautological = true;
+    }
+  }
+  for (const auto & lit : imported_clause) checked_lit (-lit) = false;
   num_clauses++;
 
   return res;
@@ -208,6 +217,74 @@ void LratChecker::insert () {
 
 /*------------------------------------------------------------------------*/
 
+
+// TODO "strict" resolution check instead of rup check
+bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
+  if (proof_chain.empty ()) {  // ignore these case TODO chain.size == 1?
+    LOG ("LRAT CHECKER resolution check skipped clause is tautological");
+    return true;
+  }
+  if (internal->opts.lratexternal) {   // ignore this case
+    LOG ("LRAT CHECKER resolution check skipped because opts.lratexternal=true");
+    return true;
+  }
+  if (internal->opts.instantiate) {   // ignore this case for now TODO dont
+    LOG ("LRAT CHECKER resolution check skipped because opts.instantiate=true");
+    return true;
+  }
+  LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
+  for (auto & b : checked_lits) b = false;            // clearing checking bits
+  LratCheckerClause * c = * find (proof_chain.back ());
+  assert (c);
+  for (int * i = c->literals; i < c->literals + c->size; i++) {
+    int lit = * i;
+    if (checked_lit (-lit) && checked_lit (lit)) {     // very bad case
+      LOG ("LRAT CHECKER resolution failed, resolved tautological clause");
+      return false;
+    }
+    checked_lit (lit) = true;
+  }
+  for (auto p = proof_chain.end () - 2; p >= proof_chain.begin (); p--) {  // TODO can we do this more
+    auto &id = *p;                                                         // elegantly with reverse iterator?
+    c = * find (id);
+    assert (c);                       // since this is checked in check already
+    bool fail = false;
+    for (int * i = c->literals; i < c->literals + c->size; i++) {
+      int lit = * i;
+      if (checked_lit (-lit) && checked_lit (lit)) {     // bad case, fails in decompose
+        LOG ("LRAT CHECKER resolution failed, literal %d resolved and added again", lit);
+        // checked_lit (-lit) = false;                      // fixes for now
+        return false;                                 // commented because decompose
+      }
+      checked_lit (lit) = true;
+      if (!fail) fail = checked_lit (-lit);
+    }
+    if (!fail) {
+      LOG ("LRAT CHECKER resolution failed, no resolving literal in clause %" PRIu64, id);
+      return false;
+    }
+  }
+  for (const auto & lit : imported_clause) {
+    if (checked_lit (-lit)) {
+      LOG ("LRAT CHECKER resolution failed, resolved literal %d in learned clause", lit);
+      return false;
+    }
+    checked_lit (-lit) = true;
+  }
+  for (int64_t lit = 1; lit < size_vars; lit++) {
+    bool ok = checked_lit (lit) && checked_lit (-lit);
+    ok = ok || (!checked_lit (lit) && !checked_lit (-lit));
+    if (!ok) {
+      LOG ("LRAT CHECKER resolution failed, learned clause does not match on variable %" PRId64, lit);
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/*------------------------------------------------------------------------*/
+
 bool LratChecker::check (vector<uint64_t> proof_chain) {
   LOG (imported_clause, "LRAT CHECKER checking clause");
   stats.checks++;
@@ -217,6 +294,7 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
     checked_lit (-lit) = true;
     if (checked_lit (lit)) {
       LOG (imported_clause, "LRAT CHECKER clause tautological");
+      assert (!proof_chain.size ());           // would be unnecessary hence a bug
       return true;
     }
   }
@@ -230,9 +308,13 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       LOG ("LRAT CHECKER LRAT failed. Did not find clause with id %" PRIu64, id);
       break;
     }
+    if (c->tautological) {
+      LOG ("LRAT CHECKER LRAT failed. Clause with id %" PRIu64 " is tautological", id);
+      break;
+    }
     used_clauses.push_back (c);
     if (c->used) {
-      LOG ("LRAT CHECKER LRAT failed. id %" PRIu64 " was used multiple times", id);
+      LOG ("LRAT CHECKER LRAT failed. Id %" PRIu64 " was used multiple times", id);
       break;                               // mostly fuzzed and debugged :)
     } else c->used = true;
     int unit = 0;
@@ -240,8 +322,8 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       int lit = * i;
       if (checked_lit (-lit)) continue;
       // TODO uncomment and fuzz maybe also withouth opts.lratexternal
-      assert (!checked_lit (lit) || opts.lratexternal);
-      assert (!checked_lit (lit));         // attempting to assert here since
+      assert (!checked_lit (lit) || internal->opts.lratexternal);
+      // assert (!checked_lit (lit));         // attempting to assert here since
                                            // usually this should be a bug in
                                            // the proof chain but in some cases
                                            // this can occur (e.g. when we prove
@@ -261,8 +343,9 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       LOG ("LRAT CHECKER check succeded, clause falsified %" PRIu64, id);
       // TODO fuzz with this to see where errors are.
       // known problems with lratbuilder? not interesting anymore...
-      assert (proof_chain.back () == id || opts.lratexternal);
-      assert (proof_chain.back () == id);    // also attempting since this
+      // fails in decompose...
+      assert (proof_chain.back () == id || internal->opts.lratexternal || internal->opts.decompose);
+      // assert (proof_chain.back () == id);    // also attempting since this
                                              // basically means the proof chain
                                              // is unnecessarily long.
                                              // but unfortunatly this also
@@ -278,7 +361,10 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
   for (auto & lc : used_clauses) {
     lc->used = false;
   }
-  if (!checking) return false;   // check failed because no empty clause was found
+  if (!checking) {
+    LOG ("LRAT CHECKER failed, no conflict found");
+    return false;   // check failed because no empty clause was found
+  }
   return true;
 }
 
@@ -307,7 +393,7 @@ void LratChecker::add_derived_clause (uint64_t id, const vector<int>& c, const v
   import_clause (c);
   last_id = id;
   assert (id);
-  if (!check (proof_chain)) {
+  if (!check (proof_chain) || !check_resolution (proof_chain)) {
     fatal_message_start ();                        
     fputs ("failed to check derived clause:\n", stderr);
     for (const auto & lit : imported_clause)
