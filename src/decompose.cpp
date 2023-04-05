@@ -448,10 +448,11 @@ bool Internal::decompose_round () {
         assert (mini_chain.empty ());
         for (auto p : dfs_chains[vlit (other)]) {
           if (marked_decompose (other)) continue;
-          mark_decomposed (other);
+          // if (marked (other) > 0) mini_chain.clear ();   // TODO could (optionally) learn binary clause
+          mark_decomposed (other);                          // and just delete c 
           int implied = p->literals[0];
           implied = implied == other ? -p->literals[1] : -implied;
-          LOG ("ADDED %d -> %d", other, implied);
+          LOG ("ADDED %d -> %d (%" PRIu64 ")", implied, other, p->id);
           other = implied;
           mini_chain.push_back (p->id);
           if (val (implied) <= 0) continue;
