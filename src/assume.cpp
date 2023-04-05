@@ -281,12 +281,15 @@ void Internal::failing () {
               lrat_chain.push_back (p);
             }
             LOG (lrat_chain, "assume proof chain with constraints");
-            proof->add_derived_clause (++clause_id, clause, lrat_chain);
+            // TODO this is no resolution proof and by construction
+            // incompatible? therefore we do not add the clause
+            // proof->add_derived_clause (++clause_id, clause, lrat_chain);
             lrat_chain.clear ();
           }
-          else
+          else {
             proof->add_derived_clause (++clause_id, clause);
-          proof->delete_clause (clause_id, clause);
+            proof->delete_clause (clause_id, clause);  // careful: if code above is uncommented
+          }                                            // this needs to be below the else path
         }
         clause.pop_back ();
       }

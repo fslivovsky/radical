@@ -107,6 +107,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
           stats.elimbwsub++;
         } else {
           int unit = 0;
+          assert (minimize_chain.empty ());
           for (const auto & lit : * d) {
             const signed char tmp = val (lit);
             if (tmp < 0) {
@@ -116,7 +117,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
               const unsigned uidx = vlit (-lit);
               uint64_t id = unit_clauses[uidx];
               assert (id);
-              lrat_chain.push_back (id);
+              minimize_chain.push_back (id);
               continue;
             }
             if (tmp > 0) { satisfied = true; break; }
@@ -124,16 +125,20 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             if (unit) { unit = INT_MIN; break; }
             else unit = lit;
           }
+          assert (unit);
           if (opts.lrat && !opts.lratexternal) {
-            // if (unit && unit != INT_MIN) {    // seems to introduce a bug
-            for (auto p : mini_chain) {
-              lrat_chain.push_back (p);
+            if (unit != INT_MIN) {    // seems to introduce a bug TODO no? I hope not but I dont have
+              for (auto p : mini_chain) {                     // the buggy traces anymore...
+                lrat_chain.push_back (p);                     // anyways this is different than before
+              }
+              for (auto p : minimize_chain) {
+                lrat_chain.push_back (p);
+              }
             }
-            // }
+            minimize_chain.clear ();
             lrat_chain.push_back (d->id);
             lrat_chain.push_back (c->id);
           }
-          assert (unit);
           if (satisfied) {
             mark_garbage (d);
             elim_update_removed_clause (eliminator, d);
@@ -142,6 +147,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             LOG (d, "unit %d through hyper unary resolution with", unit);
             assign_unit (unit);
             elim_propagate (eliminator, unit);
+            lrat_chain.clear ();
             break;
           } else if (occs (negated).size () <= (size_t) opts.elimocclim) {
             strengthen_clause (d, negated);

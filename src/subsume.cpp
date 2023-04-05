@@ -161,6 +161,7 @@ void Internal::strengthen_clause (Clause * c, int lit) {
   assert (c->size > 2);
   LOG (c, "removing %d in", lit);
   if (proof) {
+    LOG (lrat_chain, "strengthening clause with chain");
     if (opts.lrat && !opts.lratexternal) proof->strengthen_clause (c, lit, lrat_chain);
     else proof->strengthen_clause (c, lit);
   }
