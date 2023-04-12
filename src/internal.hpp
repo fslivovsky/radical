@@ -167,6 +167,7 @@ struct Internal {
   vector<uint64_t> mini_chain;  // used to create lrat in minimize
   vector<uint64_t> minimize_chain; // used to create lrat in minimize
   vector<uint64_t> unit_chain;  // used to avoid duplicate units
+  vector<Clause *> inst_chain;  // for lrat in instantiate
   vector<vector<vector<uint64_t>>> probehbr_chains; // only used if opts.probehbr=false
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
@@ -916,7 +917,6 @@ struct Internal {
     int elim_round(bool &completed);
     void elim(bool update_limits = true);
 
-    void instantiate_unit_lrat (Clause *);
     void inst_assign(int lit);
     bool inst_propagate();
     void collect_instantiation_candidates(Instantiator &);

@@ -228,10 +228,12 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     LOG ("LRAT CHECKER resolution check skipped because opts.lratexternal=true");
     return true;
   }
+  /*
   if (internal->opts.instantiate) {   // ignore this case for now TODO dont
     LOG ("LRAT CHECKER resolution check skipped because opts.instantiate=true");
     return true;
   }
+  */
   if (internal->opts.decompose) {   // ignore this case for now TODO dont
     LOG ("LRAT CHECKER resolution check skipped because opts.decompose=true");
     return true;
@@ -328,8 +330,9 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       if (checked_lit (-lit)) continue;
       // TODO uncomment and fuzz maybe also withouth opts.lratexternal
       // of course this also fails in decompose :/ ... and instantiate
-      assert (!checked_lit (lit) || internal->opts.lratexternal || internal->opts.decompose || internal->opts.instantiate);
-      // assert (!checked_lit (lit));         // attempting to assert here since
+      assert (!checked_lit (lit) || internal->opts.lratexternal || internal->opts.decompose);
+                                           // || internal->opts.instantiate);
+      // assert (!checked_lit (lit));      // tempting to assert here since
                                            // usually this should be a bug in
                                            // the proof chain but in some cases
                                            // this can occur (e.g. when we prove
@@ -350,8 +353,9 @@ bool LratChecker::check (vector<uint64_t> proof_chain) {
       // TODO fuzz with this to see where errors are.
       // known problems with lratbuilder? not interesting anymore...
       // fails in decompose... I do not have a trace for instantiate but I am sure it also fails this assert
-      assert (proof_chain.back () == id || internal->opts.lratexternal || internal->opts.decompose || internal->opts.instantiate);
-      // assert (proof_chain.back () == id);    // also attempting since this
+      assert (proof_chain.back () == id || internal->opts.lratexternal || internal->opts.decompose);
+                                              // || internal->opts.instantiate);
+      // assert (proof_chain.back () == id);    // also tempting since this
                                              // basically means the proof chain
                                              // is unnecessarily long.
                                              // but unfortunatly this also
