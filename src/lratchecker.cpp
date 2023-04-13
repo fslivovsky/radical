@@ -228,12 +228,10 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     LOG ("LRAT CHECKER resolution check skipped because opts.lratexternal=true");
     return true;
   }
-  /*
   if (internal->opts.instantiate) {   // ignore this case for now TODO dont
     LOG ("LRAT CHECKER resolution check skipped because opts.instantiate=true");
     return true;
   }
-  */
   if (internal->opts.decompose) {   // ignore this case for now TODO dont
     LOG ("LRAT CHECKER resolution check skipped because opts.decompose=true");
     return true;
@@ -257,10 +255,9 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     bool fail = false;
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
-      if (checked_lit (-lit) && checked_lit (lit)) {     // bad case, fails in decompose
+      if (checked_lit (-lit) && checked_lit (lit)) {
         LOG ("LRAT CHECKER resolution failed, literal %d resolved and added again", lit);
-        // checked_lit (-lit) = false;                      // fixes for now
-        return false;                                 // commented because decompose
+        return false;
       }
       checked_lit (lit) = true;
       if (!fail) fail = checked_lit (-lit);
