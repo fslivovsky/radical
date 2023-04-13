@@ -130,11 +130,11 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             if (unit != INT_MIN) {    // seems to introduce a bug TODO no? I hope not but I dont have
               for (auto p : mini_chain) {                     // the buggy traces anymore...
                 lrat_chain.push_back (p);                     // anyways this is different than before
-              }
-              for (auto p : minimize_chain) {
-                lrat_chain.push_back (p);
-              }
-            }
+              }                                               // I need to sometimes add units...
+              for (auto p : minimize_chain) {                 // if they are not in both clauses
+                lrat_chain.push_back (p);                     // but dont add units that are in both clauses...
+              }                                               // for unit == INT_MIN
+            }                                                 // for unit != INT_MIN this already works...
             minimize_chain.clear ();
             lrat_chain.push_back (d->id);
             lrat_chain.push_back (c->id);
