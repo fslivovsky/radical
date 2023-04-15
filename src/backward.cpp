@@ -47,19 +47,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
   for (const auto & lit : *c) {
     const signed char tmp = val (lit);
     if (tmp > 0) { satisfied = true; break; }
-    if (tmp < 0) {
-      if (!opts.lrat || opts.lratexternal) continue;
-      Flags & f = flags (lit);
-      assert (!f.seen);                // sanity check
-      if (f.seen) continue;
-      f.seen = true;
-      analyzed.push_back (lit);
-      const unsigned uidx = vlit (-lit);
-      uint64_t id = unit_clauses[uidx];
-      assert (id);
-      mini_chain.push_back (id);
-      continue;
-    }
+    if (tmp < 0) continue;
     size_t l = occs (lit).size ();
     LOG ("literal %d occurs %zd times", lit, l);
     if (l < len) best = lit, len = l;
@@ -108,16 +96,17 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
         } else {
           int unit = 0;
           assert (minimize_chain.empty ());
-          for (const auto & lit : * d) {
-            const signed char tmp = val (lit);
-            if (tmp < 0) {
+          assert (analyzed.empty ());
+          assert (lrat_chain.empty ());
+          for (const auto & lit : * d) {                    // find out if we get
+            const signed char tmp = val (lit);              // a new unit or just
+            if (tmp < 0) {                                  // strengthen c
               if (!opts.lrat || opts.lratexternal) continue;
               Flags & f = flags (lit);
+              assert (!f.seen);
               if (f.seen) continue;
-              const unsigned uidx = vlit (-lit);
-              uint64_t id = unit_clauses[uidx];
-              assert (id);
-              minimize_chain.push_back (id);
+              f.seen = true;
+              analyzed.push_back (lit);
               continue;
             }
             if (tmp > 0) { satisfied = true; break; }
@@ -125,17 +114,33 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             if (unit) { unit = INT_MIN; break; }
             else unit = lit;
           }
-          assert (unit);
-          if (opts.lrat && !opts.lratexternal) {
-            if (unit != INT_MIN) {    // seems to introduce a bug TODO no? I hope not but I dont have
-              for (auto p : mini_chain) {                     // the buggy traces anymore...
-                lrat_chain.push_back (p);                     // anyways this is different than before
-              }                                               // I need to sometimes add units...
-              for (auto p : minimize_chain) {                 // if they are not in both clauses
-                lrat_chain.push_back (p);                     // but dont add units that are in both clauses...
-              }                                               // for unit == INT_MIN
-            }                                                 // for unit != INT_MIN this already works...
-            minimize_chain.clear ();
+          if (opts.lrat && !opts.lratexternal && !satisfied) {
+            // if we found a unit we need to add all unit ids from {c\d}U{d\c}
+            // otherwise just the unit ids from {d\c}
+            for (const auto & lit : *c) {
+              const signed char tmp = val (lit);
+              assert (tmp <= 0);
+              if (tmp >= 0) continue;
+              Flags & f = flags (lit);
+              if (f.seen) {
+                f.seen = false;
+                continue;
+              }
+              if (unit != INT_MIN) continue;
+              f.seen = true;
+              analyzed.push_back (lit);
+            }
+            for (const auto & lit : analyzed) {
+              Flags & f = flags (lit);
+              if (!f.seen) {
+                f.seen = true;
+                continue;
+              }
+              const unsigned uidx = vlit (-lit);
+              uint64_t id = unit_clauses[uidx];
+              assert (id);
+              lrat_chain.push_back (id);
+            }
             lrat_chain.push_back (d->id);
             lrat_chain.push_back (c->id);
           }
@@ -156,13 +161,12 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             stats.elimbwstr++;
             assert (negated != best);
             eliminator.enqueue (d);
+            lrat_chain.clear ();
           }
-          lrat_chain.clear ();
         }
       }
     }
   }
-  clear_analyzed_literals ();
   mini_chain.clear ();
   unmark (c);
 }
