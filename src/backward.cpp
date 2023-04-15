@@ -145,6 +145,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             lrat_chain.push_back (c->id);
           }
           if (satisfied) {
+            assert (lrat_chain.empty ());
             mark_garbage (d);
             elim_update_removed_clause (eliminator, d);
           } else if (unit && unit != INT_MIN) {
@@ -161,8 +162,8 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
             stats.elimbwstr++;
             assert (negated != best);
             eliminator.enqueue (d);
-            lrat_chain.clear ();
           }
+          lrat_chain.clear ();
         }
       }
     }
