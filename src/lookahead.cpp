@@ -392,6 +392,7 @@ int Internal::lookahead_probing() {
 CubesWithStatus Internal::generate_cubes(int depth, int min_depth) {
   if (!active() || depth == 0) {
     CubesWithStatus cubes;
+    cubes.status = 0;
     cubes.cubes.push_back(std::vector<int>());
     return cubes;
   }
