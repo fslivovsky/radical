@@ -126,19 +126,12 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
                 f.seen = false;
                 continue;
               }
-              // if (unit != INT_MIN) continue;
               f.seen = true;
               analyzed.push_back (lit);
             }
-            if (unit == INT_MIN) {
+            if (unit == INT_MIN) {       // we do not need units from {d\c}
               for (const auto & lit : *d) {
-                const signed char tmp = val (lit);
-                assert (tmp <= 0);
-                if (tmp >= 0) continue;
-                Flags & f = flags (lit);
-                if (f.seen) {
-                  f.seen = false;
-                }
+                flags (lit).seen = false;
               }
             }
             for (const auto & lit : analyzed) {
@@ -152,6 +145,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
               assert (id);
               lrat_chain.push_back (id);
             }
+            clear_analyzed_literals ();
             lrat_chain.push_back (d->id);
             lrat_chain.push_back (c->id);
           }
