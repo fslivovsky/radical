@@ -801,6 +801,24 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
       break;
     }
   }
+  
+  // try to do the same idea as in instantiate here
+  // ie., if the last literal is not already negatively implied (and the clause
+  // is not subsumed) we set it to true and strengthen the clause if we get a conflict
+  /*
+  if (!subsume) {
+    int lit = c->literals[c->size - 1];
+    if (remove != lit) {
+      // is this ok?
+      backtrack (level - 1);
+      vivify_assume (lit);
+      if (!vivify_propagate ()) {
+        // strengthen clause
+        
+      }
+    }
+  }
+  */
 
   assert (ignore == c);
   ignore = 0;
