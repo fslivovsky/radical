@@ -228,49 +228,34 @@ bool LratChecker::check_resolution (vector<uint64_t> proof_chain) {
     LOG ("LRAT CHECKER resolution check skipped because opts.lratexternal=true");
     return true;
   }
-  if (internal->opts.instantiate) {   // ignore this case for now TODO dont
-    LOG ("LRAT CHECKER resolution check skipped because opts.instantiate=true");
-    return true;
-  }
-  if (internal->opts.decompose) {   // ignore this case for now TODO dont
-    LOG ("LRAT CHECKER resolution check skipped because opts.decompose=true");
-    return true;
-  }
   LOG (imported_clause, "LRAT CHECKER checking clause with resolution");
   for (auto & b : checked_lits) b = false;            // clearing checking bits
   LratCheckerClause * c = * find (proof_chain.back ());
   assert (c);
   for (int * i = c->literals; i < c->literals + c->size; i++) {
     int lit = * i;
-    if (checked_lit (-lit) && checked_lit (lit)) {     // very bad case
-      LOG ("LRAT CHECKER resolution failed, resolved tautological clause");
-      return false;
-    }
     checked_lit (lit) = true;
+    assert (!checked_lit (-lit));
   }
   for (auto p = proof_chain.end () - 2; p >= proof_chain.begin (); p--) {  // TODO can we do this more
     auto &id = *p;                                                         // elegantly with reverse iterator?
     c = * find (id);
     assert (c);                       // since this is checked in check already
-    bool fail = false;
     for (int * i = c->literals; i < c->literals + c->size; i++) {
       int lit = * i;
-      if (checked_lit (-lit) && checked_lit (lit)) {
-        LOG ("LRAT CHECKER resolution failed, literal %d resolved and added again", lit);
-        return false;
-      }
-      checked_lit (lit) = true;
-      if (!fail) fail = checked_lit (-lit);
-    }
-    if (!fail) {
-      LOG ("LRAT CHECKER resolution failed, no resolving literal in clause %" PRIu64, id);
-      return false;
+      if (!checked_lit (-lit)) checked_lit (lit) = true;
+      else checked_lit (-lit) = false;
     }
   }
   for (const auto & lit : imported_clause) {
     if (checked_lit (-lit)) {
       LOG ("LRAT CHECKER resolution failed, resolved literal %d in learned clause", lit);
       return false;
+    }
+    if (!checked_lit (lit)) {
+      // learned clause is subsumed by resolvents
+      assert (internal->opts.instantiate || internal->opts.decompose);
+      checked_lit (lit) = true;
     }
     checked_lit (-lit) = true;
   }
