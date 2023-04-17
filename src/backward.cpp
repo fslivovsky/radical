@@ -116,7 +116,7 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
           }
           if (opts.lrat && !opts.lratexternal && !satisfied) {
             // if we found a unit we need to add all unit ids from {c\d}U{d\c}
-            // otherwise just the unit ids from {d\c}
+            // otherwise just the unit ids from {c\d}
             for (const auto & lit : *c) {
               const signed char tmp = val (lit);
               assert (tmp <= 0);
@@ -126,9 +126,20 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
                 f.seen = false;
                 continue;
               }
-              if (unit != INT_MIN) continue;
+              // if (unit != INT_MIN) continue;
               f.seen = true;
               analyzed.push_back (lit);
+            }
+            if (unit == INT_MIN) {
+              for (const auto & lit : *d) {
+                const signed char tmp = val (lit);
+                assert (tmp <= 0);
+                if (tmp >= 0) continue;
+                Flags & f = flags (lit);
+                if (f.seen) {
+                  f.seen = false;
+                }
+              }
             }
             for (const auto & lit : analyzed) {
               Flags & f = flags (lit);
