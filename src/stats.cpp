@@ -237,6 +237,7 @@ void Stats::print (Internal * internal) {
   PRT ("  vivifychecks:  %15" PRId64 "   %10.2f %%  per conflict", stats.vivifychecks, percent (stats.vivifychecks, stats.conflicts));
   PRT ("  vivifysched:   %15" PRId64 "   %10.2f %%  checks per scheduled", stats.vivifysched, percent (stats.vivifychecks, stats.vivifysched));
   PRT ("  vivifyunits:   %15" PRId64 "   %10.2f %%  per vivify check", stats.vivifyunits, percent (stats.vivifyunits, stats.vivifychecks));
+  PRT ("  vivifyinst:    %15" PRId64 "   %10.2f %%  per vivify check", stats.vivifyinst, percent (stats.vivifyinst, stats.vivifychecks));
   PRT ("  vivifysubs:    %15" PRId64 "   %10.2f %%  per subsumed", stats.vivifysubs, percent (stats.vivifysubs, stats.subsumed));
   PRT ("  vivifystrs:    %15" PRId64 "   %10.2f %%  per strengthened", stats.vivifystrs, percent (stats.vivifystrs, stats.strengthened));
   PRT ("  vivifystrirr:  %15" PRId64 "   %10.2f %%  per vivifystrs", stats.vivifystrirr, percent (stats.vivifystrirr, stats.vivifystrs));

@@ -180,6 +180,7 @@ OPTION( transredmineff,  1e6,  0,2e9,1,0,0,1, "minimum efficiency") \
 OPTION( transredreleff,  1e2,  1,1e5,1,0,0,1, "relative efficiency per mille") \
 QUTOPT( verbose,           0,  0,  3,0,0,0,0, "more verbose messages") \
 OPTION( vivify,            1,  0,  1,0,1,0,1, "vivification") \
+OPTION( vivifyinst,        1,  0,  1,0,0,0,1, "vivification") \
 OPTION( vivifymaxeff,    2e7,  0,2e9,1,0,0,1, "maximum efficiency") \
 OPTION( vivifymineff,    2e4,  0,2e9,1,0,0,1, "minimum efficiency") \
 OPTION( vivifyonce,        0,  0,  2,0,0,0,1, "vivify once: 1=red, 2=red+irr") \

@@ -805,20 +805,32 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
   // try to do the same idea as in instantiate here
   // ie., if the last literal is not already negatively implied (and the clause
   // is not subsumed) we set it to true and strengthen the clause if we get a conflict
-  /*
-  if (!subsume) {
-    int lit = c->literals[c->size - 1];
+  if (opts.vivifyinst && !subsume) {
+    const int & lit = sorted.back ();
     if (remove != lit) {
+      LOG ("instantiate vivify");
       // is this ok?
       backtrack (level - 1);
       vivify_assume (lit);
       if (!vivify_propagate ()) {
+        LOG (c, "instantiate success with literal %d in", lit);
+        stats.vivifyinst++;
         // strengthen clause
-        
+        if (opts.lrat && !opts.lratexternal) {
+          assert (lrat_chain.empty ());
+          vivify_build_lrat (0, c);
+          vivify_build_lrat (0, conflict);
+          // clear_analyzed_literals ();
+        }
+        remove = lit;
+        backtrack (level - 1);
+        conflict = 0;
+        assert (!conflict);
+      } else {
+        LOG ("instantiate failed");
       }
     }
   }
-  */
 
   assert (ignore == c);
   ignore = 0;
@@ -878,7 +890,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
     // falsified).  Those should be removed in addition to 'remove'.
     //
     for (const auto & other : *c) {
-      assert (val (other) < 0);
+      assert (val (other) || other == remove);
       Var & v = var (other);
       if (!v.level) {                  // Remove root-level fixed literals. 
         continue;
@@ -887,16 +899,21 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
         assert (v.level);
         assert (v.reason);
         LOG ("flushing literal %d", other);
-      } else {                                // Decision or unassigned.
-        LOG ("keeping literal %d", other);
-        clause.push_back (other);
+        continue;
+      } 
+      if (other == remove) {
+        stats.vivifyinst++;
+        continue;
       }
+      // Decision or unassigned.
+      LOG ("keeping literal %d", other);
+      clause.push_back (other);
     }
 
     if (redundant_mode) stats.vivifystred1++;
     else                stats.vivifystrirr++;
 
-    if (opts.lrat && !opts.lratexternal) {
+    if (opts.lrat && !opts.lratexternal && lrat_chain.empty ()) {
       assert (lrat_chain.empty ());
       vivify_build_lrat (0, c);
       clear_analyzed_literals ();
