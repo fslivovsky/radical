@@ -820,7 +820,7 @@ void Internal::vivify_clause (Vivifier & vivifier, Clause * c) {
           assert (lrat_chain.empty ());
           vivify_build_lrat (0, c);
           vivify_build_lrat (0, conflict);
-          // clear_analyzed_literals ();
+          clear_analyzed_literals ();
         }
         remove = lit;
         backtrack (level - 1);
