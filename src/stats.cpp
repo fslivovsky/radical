@@ -202,6 +202,7 @@ void Stats::print (Internal * internal) {
   if (all || stats.all.substituted) {
   PRT ("substituted:     %15" PRId64 "   %10.2f %%  of all variables", stats.all.substituted, percent (stats.all.substituted, stats.vars));
   PRT ("  decompositions:%15" PRId64 "   %10.2f    per phase", stats.decompositions, relative (stats.decompositions, stats.probingphases));
+  PRT ("  subsumed      :%15" PRId64 "   %10.2f    per phase", stats.decompsubsumed, relative (stats.decompsubsumed, stats.probingphases));
   }
   if (all || stats.subsumed) {
   PRT ("subsumed:        %15" PRId64 "   %10.2f %%  of all clauses", stats.subsumed, percent (stats.subsumed, stats.added.total));
