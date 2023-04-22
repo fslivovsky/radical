@@ -122,12 +122,13 @@ void Internal::elim_backward_clause (Eliminator & eliminator, Clause *c) {
               assert (tmp <= 0);
               if (tmp >= 0) continue;
               Flags & f = flags (lit);
-              if (f.seen) {
+              if (f.seen && unit && unit == INT_MIN) {
                 f.seen = false;
                 continue;
+              } else if (!f.seen) {
+                f.seen = true;
+                analyzed.push_back (lit);
               }
-              f.seen = true;
-              analyzed.push_back (lit);
             }
             if (unit == INT_MIN) {       // we do not need units from {d\c}
               for (const auto & lit : *d) {
