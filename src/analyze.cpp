@@ -677,7 +677,7 @@ void Internal::analyze () {
       
       // if we are on decision level 0 search assign will learn unit
       // so we need a valid chain here (of course if we are not on decision
-      // level 0 this will not result in a valid chain.
+      // level 0 this will not result in a valid chain).
       // we can just use build_chain_for_units in propagate
       //
       build_chain_for_units (forced, conflict);
