@@ -286,6 +286,14 @@ public:
 
   // ====== END IPASIR =====================================================
 
+  // ====== BEGIN EXTENSIONS ===============================================
+
+  // This section implements additional functionality for tracing.
+
+  uint64_t get_current_clause_id() const;
+
+  // ====== END EXTENSIONS =================================================
+
   //------------------------------------------------------------------------
   // Adds a literal to the constraint clause. Same functionality as 'add' but
   // the clause only exists for the next call to solve (same lifetime as

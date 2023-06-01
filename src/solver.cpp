@@ -875,6 +875,10 @@ void Solver::close_proof_trace () {
 
 /*------------------------------------------------------------------------*/
 
+uint64_t Solver::get_current_clause_id() const {
+  return internal->clause_id;
+}
+
 void Solver::build (FILE * file, const char * prefix) {
 
   assert (file == stdout || file == stderr);
