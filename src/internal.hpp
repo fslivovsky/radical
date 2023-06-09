@@ -1191,6 +1191,8 @@ struct Internal {
   void trace (File *);          // Start write proof file.
   void check ();                // Enable online proof checking.
 
+  void trace (); // Start proof tracing.
+
   // Dump to '<stdout>' as DIMACS for debugging.
   //
   void dump (Clause *);

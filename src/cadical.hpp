@@ -291,6 +291,10 @@ public:
   // This section implements additional functionality for tracing.
 
   uint64_t get_current_clause_id() const;
+  uint64_t get_latest_id() const;
+  bool is_initial_clause(uint64_t id) const;
+  const std::vector<uint64_t>& get_premises(uint64_t id) const;
+  const std::vector<int>& get_clause(uint64_t id) const;
 
   // ====== END EXTENSIONS =================================================
 
@@ -609,6 +613,7 @@ public:
   //
   bool trace_proof (FILE * file, const char * name); // Write DRAT proof.
   bool trace_proof (const char * path);              // Open & write proof.
+  bool trace_proof ();
 
   // Flush proof trace file.
   //

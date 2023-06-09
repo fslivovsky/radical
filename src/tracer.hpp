@@ -1,7 +1,7 @@
 #ifndef _tracer_h_INCLUDED
 #define _tracer_h_INCLUDED
 
-// Proof tracing to a file (actually 'File') in DRAT/FRAT format.
+#include <unordered_map>
 
 namespace CaDiCaL {
 
@@ -17,6 +17,9 @@ class Tracer {
 
   uint64_t latest_id;
   vector<uint64_t> delete_ids;
+
+  std::unordered_map<unsigned int, std::vector<int>> id_to_clause;
+  std::unordered_map<unsigned int, std::vector<uint64_t>> id_to_premises;
     
   void put_binary_zero ();
   void put_binary_lit (int external_lit);
@@ -41,8 +44,14 @@ class Tracer {
 public:
 
   // own and delete 'file'
+  Tracer (Internal *);
   Tracer (Internal *, File * file, bool binary, bool lrat, bool frat);
   ~Tracer ();
+
+  uint64_t get_latest_id() const;
+  bool is_initial_clause(uint64_t id) const;
+  const std::vector<uint64_t>& get_premises(uint64_t id) const;
+  const std::vector<int>& get_clause(uint64_t id) const;
 
   void add_derived_clause (uint64_t, const vector<int> &);
   void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t>&);

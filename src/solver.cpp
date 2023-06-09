@@ -855,6 +855,15 @@ bool Solver::trace_proof (const char * path) {
   return res;
 }
 
+bool Solver::trace_proof () {
+  REQUIRE_VALID_STATE ();
+  REQUIRE (state () == CONFIGURING,
+    "can only start proof tracing right after initialization");
+  REQUIRE (!internal->tracer, "already tracing proof");
+  internal->trace ();
+  return true;
+}
+
 void Solver::flush_proof_trace () {
   LOG_API_CALL_BEGIN ("flush_proof_trace");
   REQUIRE_VALID_STATE ();
@@ -877,6 +886,22 @@ void Solver::close_proof_trace () {
 
 uint64_t Solver::get_current_clause_id() const {
   return internal->clause_id;
+}
+
+uint64_t Solver::get_latest_id() const {
+  return internal->tracer->get_latest_id();
+}
+
+bool Solver::is_initial_clause(uint64_t id) const {
+  return internal->tracer->is_initial_clause(id);
+}
+
+const std::vector<uint64_t>& Solver::get_premises(uint64_t id) const {
+  return internal->tracer->get_premises(id);
+}
+
+const std::vector<int>& Solver::get_clause(uint64_t id) const {
+  return internal->tracer->get_clause(id);
 }
 
 void Solver::build (FILE * file, const char * prefix) {

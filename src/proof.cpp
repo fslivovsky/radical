@@ -34,6 +34,14 @@ void Internal::trace (File * file) {
   proof->connect (tracer);
 }
 
+void Internal::trace () {
+  assert (!tracer);
+  new_proof_on_demand ();
+  tracer = new Tracer (this);
+  LOG ("PROOF connecting proof tracer");
+  proof->connect (tracer);
+}
+
 // Enable proof checking.
 
 void Internal::check () {

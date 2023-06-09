@@ -4,6 +4,10 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+Tracer::Tracer (Internal * i): Tracer(i, 0, false, true, false)
+{
+}
+
 Tracer::Tracer (Internal * i, File * f, bool b, bool lrat, bool frat) :
   internal (i),
   file (f), binary (b), lrat (lrat), frat (frat),
@@ -69,33 +73,11 @@ void Tracer::lrat_add_clause (uint64_t id, const vector<int> & clause, const vec
   LOG ("TRACER LRAT tracing addition of derived clause with proof chain");
 
   if (delete_ids.size ()) {
-    //if (binary) put_binary_id (latest_id);
-    //if (binary) file->put ('d');
-    if (!binary) file->put (latest_id), file->put (" ");
-    if (binary) file->put ('d');
-    else file->put ("d ");
-    for (auto & did : delete_ids) {
-      if (binary) put_binary_id (2 * did);     // to have the output format as drat-trim
-      else file->put (did), file->put (" ");
-    }
-    if (binary) put_binary_zero ();
-    else file->put ("0\n");
     delete_ids.clear ();
   }
   latest_id = id;
-  
-  if (binary) file->put ('a'), put_binary_id (id);
-  else file->put (id), file->put (" ");
-  for (const auto & external_lit : clause)
-    if (binary) put_binary_lit (external_lit);
-    else file->put (external_lit), file->put (' ');
-  if (binary) put_binary_zero ();
-  else file->put ("0 ");
-  for (const auto & c : chain)
-    if (binary) put_binary_id (2*c);          // lrat can have negative ids
-    else file->put (c), file->put (' ');      // in proof chain, so they get
-  if (binary) put_binary_zero ();             // since cadical has no rat-steps
-  else file->put ("0\n");                     // this is just 2c here 
+  id_to_clause[id] = clause;
+  id_to_premises.emplace(id, chain);
 }
 
 void Tracer::lrat_delete_clause (uint64_t id) {
@@ -195,11 +177,25 @@ void Tracer::drat_delete_clause (const vector<int> & clause) {
 
 /*------------------------------------------------------------------------*/
 
-void Tracer::add_original_clause (uint64_t id, const vector<int> & clause) { 
-  if (file->closed ()) return;
-  if (frat) frat_add_original_clause (id, clause);
+uint64_t Tracer::get_latest_id() const {
+  return latest_id;
 }
 
+bool Tracer::is_initial_clause(uint64_t id) const {
+  return id_to_premises.find(id) == id_to_premises.end();
+}
+
+void Tracer::add_original_clause (uint64_t id, const vector<int> & clause) { 
+  id_to_clause[id] = clause;
+}
+
+const std::vector<uint64_t>& Tracer::get_premises(uint64_t id) const {
+  return id_to_premises.at(id);
+}
+
+const std::vector<int>& Tracer::get_clause(uint64_t id) const {
+  return id_to_clause.at(id);
+}
 
 void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {
   if (file->closed ()) return;
@@ -213,25 +209,18 @@ void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {
 
 
 void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause, const vector<uint64_t> & chain) {
-  if (file->closed ()) return;
-  if (frat) frat_add_derived_clause (id, clause, chain);
-  else if (lrat) lrat_add_clause (id, clause, chain);
-  else drat_add_clause (clause);
+  assert(lrat);
+  lrat_add_clause (id, clause, chain);
   added++;
 }
 
 void Tracer::delete_clause (uint64_t id, const vector<int> & clause) {
-  if (file->closed ()) return;
-  if (frat) frat_delete_clause (id, clause);
-  else if (lrat) lrat_delete_clause (id);
-  else drat_delete_clause (clause);
+  assert(lrat);
+  lrat_delete_clause (id);
   deleted++;
 }
 
-void Tracer::finalize_clause (uint64_t id, const vector<int> & clause) {
-  if (file->closed ()) return;
-  if (frat) frat_finalize_clause (id, clause);
-}
+void Tracer::finalize_clause (uint64_t id, const vector<int> & clause) {}
 
 void Tracer::set_first_id (uint64_t id) {
   latest_id = id;
@@ -239,15 +228,10 @@ void Tracer::set_first_id (uint64_t id) {
 
 /*------------------------------------------------------------------------*/
 
-bool Tracer::closed () { return file->closed (); }
+bool Tracer::closed () { return false; }
 
-void Tracer::close () { assert (!closed ()); file->close (); }
+void Tracer::close () { }
 
-void Tracer::flush () {
-  assert (!closed ());
-  file->flush ();
-  MSG ("traced %" PRId64 " added and %" PRId64 " deleted clauses",
-    added, deleted);
-}
+void Tracer::flush () { }
 
 }
