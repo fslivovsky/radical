@@ -52,6 +52,8 @@ public:
   bool is_initial_clause(uint64_t id) const;
   const std::vector<uint64_t>& get_premises(uint64_t id) const;
   const std::vector<int>& get_clause(uint64_t id) const;
+  const std::vector<uint64_t>& get_delete_ids() const;
+  void clear_delete_ids();
 
   void add_derived_clause (uint64_t, const vector<int> &);
   void add_derived_clause (uint64_t, const vector<int> &, const vector<uint64_t>&);

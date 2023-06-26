@@ -71,10 +71,6 @@ inline void Tracer::put_binary_id (uint64_t id) {
 
 void Tracer::lrat_add_clause (uint64_t id, const vector<int> & clause, const vector<uint64_t> & chain) {
   LOG ("TRACER LRAT tracing addition of derived clause with proof chain");
-
-  if (delete_ids.size ()) {
-    delete_ids.clear ();
-  }
   latest_id = id;
   id_to_clause[id] = clause;
   id_to_premises.emplace(id, chain);
@@ -195,6 +191,14 @@ const std::vector<uint64_t>& Tracer::get_premises(uint64_t id) const {
 
 const std::vector<int>& Tracer::get_clause(uint64_t id) const {
   return id_to_clause.at(id);
+}
+
+const std::vector<uint64_t>& Tracer::get_delete_ids() const {
+  return delete_ids;
+}
+
+void Tracer::clear_delete_ids() {
+  delete_ids.clear();
 }
 
 void Tracer::add_derived_clause (uint64_t id, const vector<int> & clause) {

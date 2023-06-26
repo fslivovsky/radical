@@ -904,6 +904,16 @@ const std::vector<int>& Solver::get_clause(uint64_t id) const {
   return internal->tracer->get_clause(id);
 }
 
+const std::vector<uint64_t>& Solver::get_delete_ids() const {
+  return internal->tracer->get_delete_ids();
+}
+
+void Solver::clear_delete_ids() {
+  internal->tracer->clear_delete_ids();
+}
+
+/*------------------------------------------------------------------------*/
+
 void Solver::build (FILE * file, const char * prefix) {
 
   assert (file == stdout || file == stderr);
